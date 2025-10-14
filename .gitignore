@@ -1,0 +1,6 @@
+/mongot_data
+/mongod_data
+/mongod_configdb
+keyfile
+passwordFile
+sampledata.archive
