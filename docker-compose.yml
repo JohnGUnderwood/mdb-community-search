@@ -1,0 +1,96 @@
+services:
+  # Service to generate keyfile and password file if they don't exist
+  setup-generator:
+    image: alpine:latest
+    container_name: setup-generator
+    volumes:
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+    command: >
+      sh -c "
+        echo 'Setting up security files...';
+        echo 'Admin password: [HIDDEN]';
+        echo 'Mongot password: [HIDDEN]';
+        
+        # Generate keyfile if it doesn't exist
+        if [ ! -f keyfile ]; then
+          echo 'Generating keyfile...';
+          apk add --no-cache openssl;
+          openssl rand -base64 756 > keyfile;
+          chmod 400 keyfile;
+          echo 'Keyfile generated successfully';
+        else
+          echo 'Keyfile already exists, skipping generation';
+        fi;
+        
+        # Create password file with specified password
+        echo 'Creating password file...';
+        echo -n "$MONGOT_PASSWORD" > passwordFile;
+        chmod 600 passwordFile;
+        echo 'Password file created successfully';
+        
+        echo 'Setup completed successfully';
+      "
+    profiles:
+      - setup
+
+  mongod:
+    image: mongodb/mongodb-community-server:latest
+    container_name: mongod-community
+    environment:
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      MONGOT_PASSWORD: ${MONGOT_PASSWORD:-mongotPassword}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+    command: >-
+      mongod
+      --config /etc/mongod.conf
+      --replSetMember=mongod.search-community:27017
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongod_data:/data/db
+      - ./mongod_configdb:/data/configdb
+      - ./mongod.conf:/etc/mongod.conf:ro
+      - ./keyfile:/keyfile:ro
+      - ./sampledata.archive:/sampledata.archive:ro
+      - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
+    networks:
+      - search-community
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  mongot:
+    image: mongodb/mongodb-community-search:latest
+    container_name: mongot-community
+    ports:
+      - "27028:27028"  # gRPC server port
+      - "8080:8080"    # Health check port  
+      - "9946:9946"    # Metrics port
+    volumes:
+      - ./mongot_data:/data/mongot
+      - ./mongot.conf:/mongot-community/config.default.yml:ro
+      - ./passwordFile:/passwordFile:ro
+    networks:
+      - search-community
+    depends_on:
+      mongod:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  search-community:
+    name: search-community
+    driver: bridge
