@@ -264,3 +264,65 @@ The services communicate through a custom bridge network called `search-communit
 - Sample data: Loaded from `sampledata.archive` if present
 
 All data directories are created automatically and persist between container restarts.
+
+# Prometheus Monitoring Setup
+
+This setup includes comprehensive monitoring with Prometheus and Grafana for both MongoDB Community Server and mongot metrics.
+
+## Quick Start with Monitoring
+
+```bash
+# Start the full stack with monitoring
+./start-monitoring.sh
+```
+
+This provides:
+- **MongoDB Community Server**: Monitored via MongoDB Exporter  
+- **mongot (Atlas Search)**: Native Prometheus metrics endpoint
+- **Prometheus**: Metrics collection and time-series database
+- **Grafana**: Visualization and dashboarding
+
+## Access Points
+
+| Service | URL | Default Credentials |
+|---------|-----|-------------------|
+| Prometheus Web UI | http://localhost:9090 | - |
+| Grafana Dashboards | http://localhost:3000 | admin/admin |
+| MongoDB Exporter Metrics | http://localhost:9216/metrics | - |
+| mongot Native Metrics | http://localhost:9946/metrics | - |
+
+## Available Metrics
+
+- **MongoDB Metrics**: `mongodb_*` (connections, operations, memory, etc.)
+- **mongot Metrics**: `mongot_*` (search performance, indexing, etc.)
+- **System Metrics**: Standard Prometheus metrics for both services
+
+## Testing the Setup
+
+```bash
+# Test all monitoring endpoints
+./test-monitoring.sh
+
+# Test dashboard metrics availability
+./test-dashboard-metrics.sh
+
+# Generate sample activity to populate dashboard metrics
+./demo-dashboard.sh
+```
+
+## Pre-built Dashboard
+
+A comprehensive Grafana dashboard is automatically loaded with the following panels:
+- **Service Status**: MongoDB and Mongot availability
+- **Connection Metrics**: Current and active connections
+- **Operations Rate**: Database operations per second by type
+- **Memory Usage**: Resident and virtual memory consumption
+- **Network I/O**: Bytes in/out rates
+- **Search Metrics**: Search command latency, rates, and failures
+- **Database Stats**: Collection counts and data sizes
+- **WiredTiger Cache**: Cache usage and efficiency
+- **Search Performance**: Average latency and executor metrics
+
+The dashboard automatically refreshes every 5 seconds and shows the last hour of data.
+
+See [MONITORING.md](MONITORING.md) for detailed documentation on using Prometheus and Grafana.
