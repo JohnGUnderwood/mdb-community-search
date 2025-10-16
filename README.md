@@ -325,4 +325,34 @@ A comprehensive Grafana dashboard is automatically loaded with the following pan
 
 The dashboard automatically refreshes every 5 seconds and shows the last hour of data.
 
+### Understanding Index IDs in Grafana
+
+Search index metrics in the Grafana dashboard display MongoDB ObjectIds (e.g., `68f1163f1413d00e302ffb83`) instead of human-readable names. To identify which index is which, you can run this command to get the current mappings:
+
+```bash
+docker exec -it mongod-community mongosh --username admin --password admin --authenticationDatabase admin --eval "
+db.adminCommand('listDatabases').databases.forEach(dbInfo => { 
+  if (dbInfo.name !== 'admin' && dbInfo.name !== 'config' && dbInfo.name !== 'local') { 
+    db = db.getSiblingDB(dbInfo.name); 
+    db.runCommand('listCollections').cursor.firstBatch.forEach(coll => { 
+      try { 
+        db.getCollection(coll.name).aggregate([{\\$listSearchIndexes: {}}]).forEach(idx => 
+          print(idx.id + ' = ' + dbInfo.name + '.' + coll.name + ' (' + idx.name + ' - ' + idx.type + ')')
+        ); 
+      } catch(e) {} 
+    }); 
+  } 
+});
+"
+```
+
+This will output something like:
+```
+68f10bd61413d00e302ffb82 = sample_airbnb.listingsAndReviews (default - search)
+68f1163f1413d00e302ffb83 = sample_mflix.movies (default - search)  
+68f118b41413d00e302ffb84 = sample_mflix.embedded_movies (default - vectorSearch)
+```
+
+You can reference this mapping when viewing the Grafana metrics to understand which search index each ID represents.
+
 See [MONITORING.md](MONITORING.md) for detailed documentation on using Prometheus and Grafana.

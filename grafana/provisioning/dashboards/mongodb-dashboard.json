@@ -78,25 +78,25 @@
       "type": "timeseries", 
       "targets": [
         {
-          "expr": "rate(mongodb_ss_opcounters_total{op_type=\"insert\"}[5m])",
+          "expr": "rate(mongodb_ss_opcounters{legacy_op_type=\"insert\"}[$__rate_interval])",
           "refId": "A",
           "legendFormat": "Inserts",
           "datasource": "Prometheus"
         },
         {
-          "expr": "rate(mongodb_ss_opcounters_total{op_type=\"query\"}[5m])",
+          "expr": "rate(mongodb_ss_opcounters{legacy_op_type=\"query\"}[$__rate_interval])",
           "refId": "B",
           "legendFormat": "Queries",
           "datasource": "Prometheus"
         },
         {
-          "expr": "rate(mongodb_ss_opcounters_total{op_type=\"update\"}[5m])",
+          "expr": "rate(mongodb_ss_opcounters{legacy_op_type=\"update\"}[$__rate_interval])",
           "refId": "C",
           "legendFormat": "Updates",
           "datasource": "Prometheus"
         },
         {
-          "expr": "rate(mongodb_ss_opcounters_total{op_type=\"delete\"}[5m])",
+          "expr": "rate(mongodb_ss_opcounters{legacy_op_type=\"delete\"}[$__rate_interval])",
           "refId": "D",
           "legendFormat": "Deletes",
           "datasource": "Prometheus"
@@ -144,13 +144,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(mongodb_ss_network_bytesIn[5m])",
+          "expr": "rate(mongodb_ss_network_bytesIn[$__rate_interval])",
           "refId": "A",
           "legendFormat": "Bytes In/sec",
           "datasource": "Prometheus"
         },
         {
-          "expr": "rate(mongodb_ss_network_bytesOut[5m])",
+          "expr": "rate(mongodb_ss_network_bytesOut[$__rate_interval])",
           "refId": "B",
           "legendFormat": "Bytes Out/sec",
           "datasource": "Prometheus"
@@ -171,15 +171,15 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "mongot_command_searchBetaCommandTotalLatency_seconds",
+          "expr": "mongot_command_searchCommandTotalLatency_seconds",
           "refId": "A",
-          "legendFormat": "Search Beta Command Latency",
+          "legendFormat": "Query {{quantile}}th percentile",
           "datasource": "Prometheus"
         },
         {
           "expr": "mongot_command_indexStatsCommandTotalLatency_seconds",
           "refId": "B",
-          "legendFormat": "Index Stats Command Latency",
+          "legendFormat": "Index {{quantile}}th percentile",
           "datasource": "Prometheus"
         }
       ],
@@ -198,13 +198,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(mongot_command_searchBetaCommandTotalLatency_seconds_count[5m])",
+          "expr": "rate(mongot_command_searchCommandTotalLatency_seconds_count[$__rate_interval])",
           "refId": "A", 
           "legendFormat": "Search Commands/sec",
           "datasource": "Prometheus"
         },
         {
-          "expr": "rate(mongot_command_indexStatsCommandTotalLatency_seconds_count[5m])",
+          "expr": "rate(mongot_command_indexStatsCommandTotalLatency_seconds_count[$__rate_interval])",
           "refId": "B",
           "legendFormat": "Index Stats Commands/sec",
           "datasource": "Prometheus"
@@ -225,13 +225,13 @@
       "type": "timeseries",
       "targets": [
         {
-          "expr": "rate(mongot_command_searchBetaCommandFailure_total[5m])",
+          "expr": "rate(mongot_command_searchCommandFailure_total[$__rate_interval])",
           "refId": "A",
           "legendFormat": "Search Failures/sec",
           "datasource": "Prometheus"
         },
         {
-          "expr": "rate(mongot_command_indexStatsCommandFailure_total[5m])",
+          "expr": "rate(mongot_command_indexStatsCommandFailure_total[$__rate_interval])",
           "refId": "B",
           "legendFormat": "Index Stats Failures/sec",
           "datasource": "Prometheus"
@@ -248,94 +248,108 @@
     },
     {
       "id": 9,
-      "title": "Database Collections",
-      "type": "timeseries",
+      "title": "Search Index Count",
+      "type": "stat",
       "targets": [
         {
-          "expr": "mongodb_dbstats_collections",
+          "expr": "mongot_configState_indexesInCatalog{indexFormatVersion=\"6\"}",
           "refId": "A",
-          "legendFormat": "{{database}} Collections",
+          "legendFormat": "Total Indexes",
           "datasource": "Prometheus"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": {"mode": "palette-classic"},
+          "color": {"mode": "thresholds"},
           "unit": "short",
-          "min": 0
+          "noValue": "No Indexes",
+          "thresholds": {
+            "steps": [
+              {"color": "red", "value": 0},
+              {"color": "yellow", "value": 1},
+              {"color": "green", "value": 2}
+            ]
+          }
         }
       },
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 18}
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 18}
     },
     {
       "id": 10,
-      "title": "Database Size",
+      "title": "Search Index Throughput",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "mongodb_dbstats_dataSize",
-          "refId": "A", 
-          "legendFormat": "{{database}} Data Size",
+          "expr": "rate(mongot_index_stats_indexing_insert_total[$__rate_interval])",
+          "refId": "A",
+          "legendFormat": "Inserts/sec - {{indexId_logString}}",
           "datasource": "Prometheus"
         },
         {
-          "expr": "mongodb_dbstats_indexSize",
-          "refId": "B", 
-          "legendFormat": "{{database}} Index Size",
+          "expr": "rate(mongot_index_stats_indexing_update_total[$__rate_interval])",
+          "refId": "B",
+          "legendFormat": "Updates/sec - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "rate(mongot_index_stats_indexing_delete_total[$__rate_interval])",
+          "refId": "C",
+          "legendFormat": "Deletes/sec - {{indexId_logString}}",
           "datasource": "Prometheus"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "color": {"mode": "palette-classic"},
-          "unit": "bytes",
+          "unit": "ops",
           "min": 0
         }
       },
-      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 18}
+      "gridPos": {"h": 6, "w": 12, "x": 6, "y": 18}
     },
     {
       "id": 11,
-      "title": "WiredTiger Cache",
+      "title": "Search Index Replication Lag",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "mongodb_ss_wt_cache_bytes_currently_in_the_cache",
+          "expr": "mongot_index_stats_indexing_replicationLagMs",
           "refId": "A",
-          "legendFormat": "Cache Used",
-          "datasource": "Prometheus"
-        },
-        {
-          "expr": "mongodb_ss_wt_cache_maximum_bytes_configured",
-          "refId": "B",
-          "legendFormat": "Cache Max",
+          "legendFormat": "Replication Lag - {{indexId_logString}}",
           "datasource": "Prometheus"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "color": {"mode": "palette-classic"},
-          "unit": "bytes",
-          "min": 0
+          "unit": "ms",
+          "min": 0,
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "yellow", "value": 1000},
+              {"color": "red", "value": 5000}
+            ]
+          }
         }
       },
-      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 18}
+      "gridPos": {"h": 6, "w": 6, "x": 18, "y": 18}
     },
     {
       "id": 12,
-      "title": "Mongot Executor Metrics",
+      "title": "Index Size and Documents",
       "type": "timeseries",
       "targets": [
         {
-          "expr": "mongot_blocking_server_worker_executor_active_threads",
+          "expr": "mongot_index_stats_indexSizeBytes / 1024 / 1024",
           "refId": "A",
-          "legendFormat": "Active Threads",
+          "legendFormat": "Index Size MB - {{indexId_logString}}",
           "datasource": "Prometheus"
         },
         {
-          "expr": "mongot_blocking_server_worker_executor_queued_tasks",
+          "expr": "mongot_index_stats_numLuceneDocs",
           "refId": "B",
-          "legendFormat": "Queued Tasks",
+          "legendFormat": "Lucene Docs - {{indexId_logString}}",
           "datasource": "Prometheus"
         }
       ],
@@ -344,7 +358,13 @@
           "color": {"mode": "palette-classic"},
           "unit": "short",
           "min": 0
-        }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Index Size MB"},
+            "properties": [{"id": "unit", "value": "decmbytes"}]
+          }
+        ]
       },
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 24}
     },
@@ -354,7 +374,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "rate(mongot_command_searchBetaCommandTotalLatency_seconds_sum[5m]) / rate(mongot_command_searchBetaCommandTotalLatency_seconds_count[5m])",
+          "expr": "rate(mongot_command_searchCommandTotalLatency_seconds_sum[$__rate_interval]) / rate(mongot_command_searchCommandTotalLatency_seconds_count[$__rate_interval])",
           "refId": "A",
           "legendFormat": "Avg Search Latency",
           "datasource": "Prometheus"
@@ -364,6 +384,7 @@
         "defaults": {
           "color": {"mode": "thresholds"},
           "unit": "s",
+          "noValue": "No Search Data",
           "thresholds": {
             "steps": [
               {"color": "green", "value": 0},
@@ -374,6 +395,134 @@
         }
       },
       "gridPos": {"h": 6, "w": 12, "x": 12, "y": 24}
+    },
+    {
+      "id": 14,
+      "title": "Indexing Batch Performance",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(mongot_index_stats_indexing_indexingBatchDurations_seconds_sum[$__rate_interval]) / rate(mongot_index_stats_indexing_indexingBatchDurations_seconds_count[$__rate_interval])",
+          "refId": "A",
+          "legendFormat": "Avg Batch Duration - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "rate(mongot_index_stats_indexing_totalBytesProcessed_total[$__rate_interval])",
+          "refId": "B",
+          "legendFormat": "Bytes Processed/sec - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byRegexp", "options": "/Bytes.*/"}, 
+            "properties": [{"id": "unit", "value": "Bps"}]
+          }
+        ]
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 30}
+    },
+    {
+      "id": 15,
+      "title": "Replication OpTime vs Max Possible",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "mongot_index_stats_indexing_replicationOpTime",
+          "refId": "A",
+          "legendFormat": "Current OpTime - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_index_stats_indexing_maxPossibleReplicationOpTime",
+          "refId": "B",
+          "legendFormat": "Max Possible OpTime - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "short",
+          "min": 0
+        }
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 30}
+    },
+    {
+      "id": 16,
+      "title": "Query Feature Usage Rate by Operator Type",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(mongot_index_stats_query_feature_total[$__rate_interval]) * 60",
+          "refId": "A",
+          "legendFormat": "{{name}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "qpm",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "",
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": [
+            "value"
+          ]
+        }
+      },
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36}
     }
   ],
   "time": {
