@@ -28,7 +28,7 @@ The setup process is now a simple two-step workflow:
 
 ```bash
 # Step 1: Generate security files (keyfile and passwordFile)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && export docker compose --profile setup up setup-generator
+export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup up setup-generator
 
 # Step 2: Start all services
 docker compose up mongod mongot -d
