@@ -1,4 +1,4 @@
-# MongoDB with Atlas Search (mongot) Docker Compose Setup
+# MongoDB Community with Search and Monitoring Docker Compose Setup
 
 This Docker Compose configuration provides a complete MongoDB and MongoDB Search (mongot) setup with all security prerequisites handled automatically. It will also setup Prometheus and Grafana for monitoring, create search indexes and run test queries to populate metrics.
 
