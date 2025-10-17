@@ -1,6 +1,6 @@
 {
     "preload": false,
-  "refresh": "5s",
+  "refresh": "30s",
   "schemaVersion": 42,
   "tags": [
     "mongodb",
@@ -13,7 +13,7 @@
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {},
@@ -980,7 +980,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "expr": "mongot_index_stats_query_batchDataSize{quantile=\"0.5\"}",
-          "legendFormat": "p50 Batch Size - {{indexId_logString}}",
+          "legendFormat": "p50 Batch Size",
           "refId": "A"
         },
         {
@@ -988,8 +988,8 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mongot_index_stats_query_batchDataSize{quantile=\"0.95\"}",
-          "legendFormat": "p95 Batch Size - {{indexId_logString}}",
+          "expr": "mongot_index_stats_query_batchDataSize{quantile=\"0.99\"}",
+          "legendFormat": "p99 Batch Size",
           "refId": "B"
         }
       ],
@@ -1006,7 +1006,7 @@
       },
       "id": 7,
       "panels": [],
-      "title": "🏗️ Index Performance",
+      "title": "🏗️ Search Indexes Performance (per index ID)",
       "type": "row"
     },
     {
@@ -1539,18 +1539,9 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "rate(mongot_index_stats_indexing_indexingBatchDurations_seconds_sum[$__rate_interval]) / rate(mongot_index_stats_indexing_indexingBatchDurations_seconds_count[$__rate_interval])",
-          "legendFormat": "Avg Batch Duration - {{indexId_logString}}",
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
           "expr": "rate(mongot_index_stats_indexing_totalBytesProcessed_total[$__rate_interval])",
           "legendFormat": "Bytes Processed/sec - {{indexId_logString}}",
-          "refId": "B"
+          "refId": "A"
         }
       ],
       "title": "Indexing Batch Performance",

@@ -91,18 +91,18 @@ try {
             'name': 'vector_index',
             'type':'vectorSearch',
             'definition':{
-            'fields': [
-              {
-                'type': 'vector',
-                'path': 'plot_embedding_voyage_3_large',
-                'numDimensions': 2048,
-                'similarity': 'dotProduct'
-              }
-            ]
+              'fields': [
+                {
+                  'type': 'vector',
+                  'path': 'plot_embedding_voyage_3_large',
+                  'numDimensions': 2048,
+                  'similarity': 'dotProduct'
+                }
+              ]
+            }
           }
-        }
-      );
-      print('✅ Vector search index created on sample_mflix.embedded_movies');
+        );
+        print('✅ Vector search index created on sample_mflix.embedded_movies');
       } else {
         print('✅ Vector search index already exists on sample_mflix.embedded_movies');
       }
