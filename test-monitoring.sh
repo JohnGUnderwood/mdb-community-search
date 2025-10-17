@@ -56,10 +56,10 @@ echo "--------------------------"
 test_endpoint_with_content "http://localhost:9090/api/v1/targets" "Prometheus Targets API" "mongot"
 
 # Test that Prometheus can scrape mongot
-test_endpoint_with_content "http://localhost:9090/api/v1/query?query=up{job=\"mongot\"}" "Mongot Target Status" "mongot"
+test_endpoint_with_content "http://localhost:9090/api/v1/query?query=up%7Bjob%3D%22mongot%22%7D" "Mongot Target Status" "mongot"
 
 # Test that Prometheus can scrape mongodb
-test_endpoint_with_content "http://localhost:9090/api/v1/query?query=up{job=\"mongodb\"}" "MongoDB Target Status" "mongodb"
+test_endpoint_with_content "http://localhost:9090/api/v1/query?query=up%7Bjob%3D%22mongodb%22%7D" "MongoDB Target Status" "mongodb"
 
 echo ""
 echo "Metrics content tests:"

@@ -252,7 +252,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "mongot_configState_indexesInCatalog{indexFormatVersion=\"6\"}",
+          "expr": "sum(mongot_configState_indexesInCatalog)",
           "refId": "A",
           "legendFormat": "Total Indexes",
           "datasource": "Prometheus"
@@ -369,7 +369,7 @@
       "gridPos": {"h": 6, "w": 12, "x": 0, "y": 24}
     },
     {
-      "id": 13,
+      "id": 25,
       "title": "Average Search Latency",
       "type": "stat",
       "targets": [
@@ -394,7 +394,35 @@
           }
         }
       },
-      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 24}
+      "gridPos": {"h": 6, "w": 6, "x": 0, "y": 30}
+    },
+    {
+      "id": 26,
+      "title": "Average Vector Search Latency",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "rate(mongot_command_vectorSearchCommandTotalLatency_seconds_sum[$__rate_interval]) / rate(mongot_command_vectorSearchCommandTotalLatency_seconds_count[$__rate_interval])",
+          "refId": "A",
+          "legendFormat": "Avg Vector Search Latency",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "unit": "s",
+          "noValue": "No Vector Search Data",
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "yellow", "value": 0.1},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 6, "w": 6, "x": 6, "y": 30}
     },
     {
       "id": 14,
@@ -427,37 +455,10 @@
           }
         ]
       },
-      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 30}
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 36}
     },
     {
       "id": 15,
-      "title": "Replication OpTime vs Max Possible",
-      "type": "timeseries",
-      "targets": [
-        {
-          "expr": "mongot_index_stats_indexing_replicationOpTime",
-          "refId": "A",
-          "legendFormat": "Current OpTime - {{indexId_logString}}",
-          "datasource": "Prometheus"
-        },
-        {
-          "expr": "mongot_index_stats_indexing_maxPossibleReplicationOpTime",
-          "refId": "B",
-          "legendFormat": "Max Possible OpTime - {{indexId_logString}}",
-          "datasource": "Prometheus"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {"mode": "palette-classic"},
-          "unit": "short",
-          "min": 0
-        }
-      },
-      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 30}
-    },
-    {
-      "id": 16,
       "title": "Query Feature Usage Rate by Operator Type",
       "type": "timeseries",
       "targets": [
@@ -523,6 +524,351 @@
         }
       },
       "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36}
+    },
+    {
+      "id": 16,
+      "title": "Vector Search numCandidates Distribution",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "mongot_index_stats_query_numCandidatesPerQuery{quantile=\"0.5\"}",
+          "refId": "A",
+          "legendFormat": "p50 Candidates - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_index_stats_query_numCandidatesPerQuery{quantile=\"0.95\"}",
+          "refId": "B",
+          "legendFormat": "p95 Candidates - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_index_stats_query_numCandidatesPerQuery{quantile=\"0.99\"}",
+          "refId": "C",
+          "legendFormat": "p99 Candidates - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "Documents",
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 44}
+    },
+    {
+      "id": 17,
+      "title": "Vector Search Limit Distribution",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "mongot_index_stats_query_limitPerQuery{quantile=\"0.5\"}",
+          "refId": "A",
+          "legendFormat": "p50 Limit - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_index_stats_query_limitPerQuery{quantile=\"0.95\"}",
+          "refId": "B",
+          "legendFormat": "p95 Limit - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_index_stats_query_limitPerQuery{quantile=\"0.99\"}",
+          "refId": "C",
+          "legendFormat": "p99 Limit - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "short",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "Limit Value",
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 44}
+    },
+    {
+      "id": 18,
+      "title": "Search Query Batch Data Size Distribution",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "mongot_index_stats_query_batchDataSize{quantile=\"0.5\"}",
+          "refId": "A",
+          "legendFormat": "p50 Batch Size - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_index_stats_query_batchDataSize{quantile=\"0.95\"}",
+          "refId": "B",
+          "legendFormat": "p95 Batch Size - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_index_stats_query_batchDataSize{quantile=\"0.99\"}",
+          "refId": "C",
+          "legendFormat": "p99 Batch Size - {{indexId_logString}}",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "bytes",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "barAlignment": 0,
+            "lineWidth": 1,
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "spanNulls": false,
+            "insertNulls": false,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisPlacement": "auto",
+            "axisLabel": "Batch Size",
+            "axisColorMode": "text",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "axisCenteredZero": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 44}
+    },
+    {
+      "id": 19,
+      "title": "Vector Search Command Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(mongot_command_vectorSearchCommandTotalLatency_seconds_count[$__rate_interval])",
+          "refId": "A",
+          "legendFormat": "Vector Search Commands/sec",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "ops",
+          "min": 0
+        }
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 50}
+    },
+    {
+      "id": 20,
+      "title": "Vector Search Command Latency Distribution",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "mongot_command_vectorSearchCommandTotalLatency_seconds{quantile=\"0.5\"}",
+          "refId": "A",
+          "legendFormat": "p50 Vector Search Latency",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_command_vectorSearchCommandTotalLatency_seconds{quantile=\"0.95\"}",
+          "refId": "B",
+          "legendFormat": "p95 Vector Search Latency",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "mongot_command_vectorSearchCommandTotalLatency_seconds{quantile=\"0.99\"}",
+          "refId": "C",
+          "legendFormat": "p99 Vector Search Latency",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 50}
+    },
+    {
+      "id": 21,
+      "title": "Vector Search Serialization Performance",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(mongot_command_vectorSearchCommandSerializationLatency_seconds_count[$__rate_interval])",
+          "refId": "A",
+          "legendFormat": "Serialization Operations/sec",
+          "datasource": "Prometheus"
+        },
+        {
+          "expr": "rate(mongot_command_vectorSearchCommandSerializationLatency_seconds_sum[$__rate_interval]) / rate(mongot_command_vectorSearchCommandSerializationLatency_seconds_count[$__rate_interval])",
+          "refId": "B",
+          "legendFormat": "Avg Serialization Latency",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "unit": "ops",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byRegexp", "options": "/.*Latency.*/"}, 
+            "properties": [{"id": "unit", "value": "s"}]
+          }
+        ]
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 50}
+    },
+    {
+      "id": 22,
+      "title": "Vector Search Failures",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "rate(mongot_command_vectorSearchCommandFailure_total[$__rate_interval])",
+          "refId": "A",
+          "legendFormat": "Vector Search Failures/sec",
+          "datasource": "Prometheus"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "unit": "ops",
+          "thresholds": {
+            "steps": [
+              {"color": "green", "value": 0},
+              {"color": "yellow", "value": 0.1},
+              {"color": "red", "value": 1}
+            ]
+          }
+        }
+      },
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 56}
     }
   ],
   "time": {

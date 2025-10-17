@@ -44,9 +44,43 @@ echo "  MongoDB Exporter:  http://localhost:9216/metrics"
 echo "  Prometheus:        http://localhost:9090"
 echo "  Grafana:          http://localhost:3000 (admin/${GRAFANA_PASSWORD})"
 echo ""
-echo "Wait for services to be healthy, then you can:"
+echo "Waiting for services to be ready..."
+sleep 10
+
+# Run monitoring tests
+echo ""
+echo "🧪 Running monitoring tests..."
+echo "=============================="
+if [ -x "./test-monitoring.sh" ]; then
+    ./test-monitoring.sh
+else
+    echo "⚠️  test-monitoring.sh not found or not executable"
+    echo "   Run 'chmod +x test-monitoring.sh' to make it executable"
+fi
+
+# First, test that all dashboard metrics are available
+echo "🧪 Running dashboard metrics test to check all dashboard metrics return..."
+if [ -x "./grafana/test-dashboard-metrics.sh" ]; then
+    ./grafana/test-dashboard-metrics.sh
+else
+    echo "⚠️  grafana/test-dashboard-metrics.sh not found or not executable"
+    echo "   Run 'chmod +x grafana/test-dashboard-metrics.sh' to make it executable"
+fi
+
+# Check if the test passed
+if [ $? -ne 0 ]; then
+    echo "❌ Dashboard metrics test failed. Please ensure all services are running properly."
+    exit 1
+fi
+
+echo ""
+
+echo ""
+echo "📊 Setup complete! You can now:"
 echo "  1. View metrics directly in Prometheus at http://localhost:9090"
 echo "  2. Create dashboards in Grafana at http://localhost:3000"
 echo "  3. Query MongoDB metrics: mongodb_* (from exporter)"
 echo "  4. Query Mongot metrics: mongot_* (native)"
+echo ""
+echo "💡 To populate your search indexes and metrics with test data run: ./demo-dashboard.sh"
 echo ""
