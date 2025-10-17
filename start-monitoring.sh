@@ -82,5 +82,29 @@ echo "  2. Create dashboards in Grafana at http://localhost:3000"
 echo "  3. Query MongoDB metrics: mongodb_* (from exporter)"
 echo "  4. Query Mongot metrics: mongot_* (native)"
 echo ""
-echo "💡 To populate your search indexes and metrics with test data run: ./demo-dashboard.sh"
+
+# Ask user if they want to generate test data
+echo "🎯 Would you like to generate test data and metrics now? This will:"
+echo "   • Create search indexes on sample movie data"
+echo "   • Run search queries to populate dashboard metrics"
+echo "   • Make the Grafana dashboard show real data"
+echo ""
+read -p "Generate test metrics? (y/N): " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo ""
+    echo "🚀 Generating test metrics..."
+    if [ -x "./generate-metrics.sh" ]; then
+        ./generate-metrics.sh
+    else
+        echo "⚠️  generate-metrics.sh not found or not executable"
+        echo "   Run 'chmod +x generate-metrics.sh' to make it executable"
+        echo "   Then run: ./generate-metrics.sh"
+    fi
+else
+    echo ""
+    echo "💡 To populate your search indexes and metrics with test data later, run: ./generate-metrics.sh"
+fi
+
 echo ""

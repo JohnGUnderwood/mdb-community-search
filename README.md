@@ -332,7 +332,7 @@ This provides:
 ./grafana/test-dashboard-metrics.sh
 
 # Generate sample activity to populate dashboard metrics
-./demo-dashboard.sh
+./generate-metrics.sh
 ```
 
 ## Using Prometheus

@@ -42,13 +42,7 @@ try {
       const moviesIndexes = db.embedded_movies.getSearchIndexes();
       const textIndexExists = moviesIndexes.some(idx => idx.name === 'text_index');
       
-      // Drop existing index if it exists to recreate with autocomplete
-      if (textIndexExists) {
-        db.embedded_movies.dropSearchIndex('text_index');
-        print('🔄 Dropped existing text search index');
-      }
-      
-      if (!textIndexExists || true) { // Force recreation
+      if (!textIndexExists) {
         db.embedded_movies.createSearchIndex(
           'text_index',
           {
@@ -91,17 +85,12 @@ try {
       const embeddedIndexes = db.embedded_movies.getSearchIndexes();
       const vectorIndexExists = embeddedIndexes.some(idx => idx.name === 'vector_index');
 
-      // Drop existing index if it exists to recreate with autocomplete
-      if (vectorIndexExists) {
-        db.embedded_movies.dropSearchIndex('vector_index');
-        print('🔄 Dropped existing vector search index');
-      }
-      
-      db.embedded_movies.createSearchIndex(
-        {
-          'name': 'vector_index',
-          'type':'vectorSearch',
-          'definition':{
+      if (!vectorIndexExists) {
+        db.embedded_movies.createSearchIndex(
+          {
+            'name': 'vector_index',
+            'type':'vectorSearch',
+            'definition':{
             'fields': [
               {
                 'type': 'vector',
@@ -114,6 +103,9 @@ try {
         }
       );
       print('✅ Vector search index created on sample_mflix.embedded_movies');
+      } else {
+        print('✅ Vector search index already exists on sample_mflix.embedded_movies');
+      }
       
     } catch (e) {
       print('ℹ️  Note: Vector search index creation failed: ' + e.message);
