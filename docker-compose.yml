@@ -169,4 +169,4 @@ networks:
   search-community:
     name: search-community
     driver: bridge
-    external: true  # Use an external network if it exists. Comment this line if you want to create a new network.
+    # external: true  # Use an external network if it exists. Comment this line if you want to create a new network.
