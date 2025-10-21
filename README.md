@@ -28,13 +28,13 @@ The setup process is now a simple two-step workflow:
 
 ```bash
 # Step 1: Generate security files (keyfile and passwordFile)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup up setup-generator
+export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator
 
 # Step 2: Start all services
 docker compose up mongod mongot -d
 
 # Or combine both steps (but step-by-step is recommended for clarity)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup up setup-generator && docker compose up mongod mongot -d
+export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator && docker compose up mongod mongot -d
 ```
 
 ### With monitoring
@@ -48,7 +48,7 @@ Set your own passwords by passing environment variables:
 
 ```bash
 # Step 1: Generate security files with custom passwords
-export ADMIN_PASSWORD="mySecureAdminPass" MONGOT_PASSWORD="mySecureMongotPass" && docker compose --profile setup up setup-generator
+export ADMIN_PASSWORD="mySecureAdminPass" MONGOT_PASSWORD="mySecureMongotPass" && docker compose --profile setup run --rm setup-generator
 
 # Step 2: Start services
 docker compose up -d
@@ -83,7 +83,7 @@ The Docker Compose setup handles the following automatically:
 ### Setup Generator (setup-generator)
 - **Purpose**: Generates keyfile and passwordFile when needed
 - **Usage**: Only run with `--profile setup` for initial setup or to recreate security files
-- **Container**: `setup-generator` (runs once and exits)
+- **Container**: `setup-generator` (runs once, exits, and removes container)
 
 ### MongoDB (mongod)
 - **Container**: `mongod-community`
@@ -117,7 +117,7 @@ The Docker Compose setup handles the following automatically:
 The Docker Compose configuration follows a clean two-phase approach:
 
 **Phase 1: Setup** (one-time, uses `--profile setup`):
-- `setup-generator`: Creates keyfile and passwordFile, then exits
+- `setup-generator`: Creates keyfile and passwordFile, then exits and removes container
 
 **Phase 2: Normal Operations** (ongoing use):
 - `mongod`: MongoDB service (assumes security files exist from Phase 1)
@@ -134,7 +134,7 @@ export ADMIN_PASSWORD="admin"
 export MONGOT_PASSWORD="mongotPassword"
 
 # Step 2: Generate security files (uses passwords above)
- docker compose --profile setup up setup-generator
+ docker compose --profile setup run --rm setup-generator
 
 # Step 2: Start services
 docker compose up -d
@@ -207,7 +207,7 @@ If you encounter keyfile permission issues:
 rm keyfile passwordFile
 export ADMIN_PASSWORD="admin"
 export MONGOT_PASSWORD="mongotPassword"
-docker compose --profile setup up setup-generator
+docker compose --profile setup run --rm setup-generator
 ```
 
 ### Reset Everything
@@ -219,7 +219,7 @@ rm -rf keyfile passwordFile
 # Start fresh with default passwords
 export ADMIN_PASSWORD="admin"
 exort MONGOT_PASSWORD="mongotPassword"
-docker compose --profile setup up setup-generator
+docker compose --profile setup run --rm setup-generator
 docker compose up -d
 ```
 
@@ -233,7 +233,7 @@ docker compose down
 rm passwordFile
 
 # Regenerate password file with new password
-export ADMIN_PASSWORD="newAdminPass" MONGOT_PASSWORD="newMongotPass" && docker compose --profile setup up setup-generator
+export ADMIN_PASSWORD="newAdminPass" MONGOT_PASSWORD="newMongotPass" && docker compose --profile setup run --rm setup-generator
 
 # Restart services
 docker compose up -d
@@ -243,16 +243,16 @@ docker compose up -d
 
 **Error: "no such file or directory" for keyfile or passwordFile**
 - This happens when running `docker compose up` before running the setup phase
-- Solution: Run setup first: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup up setup-generator`
+- Solution: Run setup first: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
 
 **Services won't start**
 - Check if keyfile and passwordFile exist: `ls -la keyfile passwordFile`
-- If missing, run setup: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup up setup-generator`
+- If missing, run setup: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
 - Then start services: `docker compose up -d`
 
 **MongoDB authentication errors**
 - Ensure the passwordFile contains the correct mongot password
-- Regenerate if needed: `rm passwordFile && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup up setup-generator`
+- Regenerate if needed: `rm passwordFile && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
 
 ## Network Configuration
 
