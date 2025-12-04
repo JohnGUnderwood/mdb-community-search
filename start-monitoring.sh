@@ -61,7 +61,9 @@ fi
 # First, test that all dashboard metrics are available
 echo "🧪 Running dashboard metrics test to check all dashboard metrics return..."
 if [ -x "./grafana/test-dashboard-metrics.sh" ]; then
-    ./grafana/test-dashboard-metrics.sh
+    cd grafana
+    ./test-dashboard-metrics.sh
+    cd ..
 else
     echo "⚠️  grafana/test-dashboard-metrics.sh not found or not executable"
     echo "   Run 'chmod +x grafana/test-dashboard-metrics.sh' to make it executable"
