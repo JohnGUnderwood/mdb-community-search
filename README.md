@@ -23,18 +23,26 @@ curl  https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.
 ```
 
 ### Default Setup (default passwords)
+All bash scripts should work fine on Windows using wsl. However, to setup a keyfile requires running the `setup.ps1` powershell file due to windows filesystem permissions discrepancies.
 
-The setup process is now a simple two-step workflow:
+The setup process is a simple two-step workflow:
 
+#### Step 1: Generate security files (keyfile and passwordFile)
+##### MacOS/Linux
 ```bash
-# Step 1: Generate security files (keyfile and passwordFile)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator
+export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword"
+./setup.sh
+```
 
-# Step 2: Start all services
+##### Windows
+```powershell
+$env:ADMIN_PASSWORD = "admin"; $env:MONGOT_PASSWORD = "mongotPassword"
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
+#### Step 2: Start all services
+```
 docker compose up mongod mongot -d
-
-# Or combine both steps (but step-by-step is recommended for clarity)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator && docker compose up mongod mongot -d
 ```
 
 ### With monitoring
@@ -48,7 +56,7 @@ Set your own passwords by passing environment variables:
 
 ```bash
 # Step 1: Generate security files with custom passwords
-export ADMIN_PASSWORD="mySecureAdminPass" MONGOT_PASSWORD="mySecureMongotPass" && docker compose --profile setup run --rm setup-generator
+export ADMIN_PASSWORD="mySecureAdminPass" MONGOT_PASSWORD="mySecureMongotPass" 
 
 # Step 2: Start services
 docker compose up -d
@@ -80,11 +88,6 @@ The Docker Compose setup handles the following automatically:
 
 ## Services
 
-### Setup Generator (setup-generator)
-- **Purpose**: Generates keyfile and passwordFile when needed
-- **Usage**: Only run with `--profile setup` for initial setup or to recreate security files
-- **Container**: `setup-generator` (runs once, exits, and removes container)
-
 ### MongoDB (mongod)
 - **Container**: `mongod-community`
 - **Port**: 27017
@@ -107,23 +110,14 @@ The Docker Compose setup handles the following automatically:
 ## Configuration Files
 
 - `mongod.conf`: MongoDB server configuration
-- `mongot.conf`: MongoDB Atlas Search configuration  
-- `passwordFile`: Auto-generated file containing the mongot user password
-- `keyfile`: Auto-generated replica set keyfile
+- `mongot.conf`: MongoDB Atlas Search configuration
+
+## Scripts
 - `init-mongo.sh`: Initialization script for user creation and data loading
-
-## Service Architecture
-
-The Docker Compose configuration follows a clean two-phase approach:
-
-**Phase 1: Setup** (one-time, uses `--profile setup`):
-- `setup-generator`: Creates keyfile and passwordFile, then exits and removes container
-
-**Phase 2: Normal Operations** (ongoing use):
-- `mongod`: MongoDB service (assumes security files exist from Phase 1)
-- `mongot`: MongoDB Atlas Search service (depends on mongod health)
-
-This design separates concerns cleanly: setup is a one-time utility, while the main services run independently without complex dependencies.
+- `setup.sh`|`setup.ps1`: Creates `keyfile` and `passwordFile` for inter-service authentication.
+  - `keyfile`: Auto-generated replica set keyfile
+  - `passwordFile`: Auto-generated file containing the mongot user password
+- `fix-keyfile-permissions.sh`: Ensures keyfile permissions are correct on the container.
 
 ## Commands
 
@@ -134,11 +128,13 @@ export ADMIN_PASSWORD="admin"
 export MONGOT_PASSWORD="mongotPassword"
 
 # Step 2: Generate security files (uses passwords above)
- docker compose --profile setup run --rm setup-generator
+./setup.sh
 
 # Step 2: Start services
 docker compose up -d
 ```
+
+On Windows use the `setup.ps1` powershell script for the security file generation.
 
 ### Daily Operations
 ```bash
@@ -207,7 +203,7 @@ If you encounter keyfile permission issues:
 rm keyfile passwordFile
 export ADMIN_PASSWORD="admin"
 export MONGOT_PASSWORD="mongotPassword"
-docker compose --profile setup run --rm setup-generator
+./setup.sh
 ```
 
 ### Reset Everything
@@ -219,7 +215,7 @@ rm -rf keyfile passwordFile
 # Start fresh with default passwords
 export ADMIN_PASSWORD="admin"
 exort MONGOT_PASSWORD="mongotPassword"
-docker compose --profile setup run --rm setup-generator
+./setup.sh
 docker compose up -d
 ```
 
@@ -233,7 +229,7 @@ docker compose down
 rm passwordFile
 
 # Regenerate password file with new password
-export ADMIN_PASSWORD="newAdminPass" MONGOT_PASSWORD="newMongotPass" && docker compose --profile setup run --rm setup-generator
+export ADMIN_PASSWORD="newAdminPass" MONGOT_PASSWORD="newMongotPass" && setup.sh
 
 # Restart services
 docker compose up -d
@@ -243,16 +239,16 @@ docker compose up -d
 
 **Error: "no such file or directory" for keyfile or passwordFile**
 - This happens when running `docker compose up` before running the setup phase
-- Solution: Run setup first: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
+- Solution: Run setup first: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && setup.sh`
 
 **Services won't start**
 - Check if keyfile and passwordFile exist: `ls -la keyfile passwordFile`
-- If missing, run setup: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
+- If missing, run setup: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && setup.sh`
 - Then start services: `docker compose up -d`
 
 **MongoDB authentication errors**
 - Ensure the passwordFile contains the correct mongot password
-- Regenerate if needed: `rm passwordFile && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
+- Regenerate if needed: `rm passwordFile && export MONGOT_PASSWORD="yourPassword" && setup.sh`
 
 ## Network Configuration
 

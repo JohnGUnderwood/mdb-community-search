@@ -26,7 +26,7 @@ echo "  Grafana Admin: [HIDDEN]"
 # Run setup first if keyfile doesn't exist
 if [ ! -f keyfile ]; then
     echo "Running initial setup..."
-    docker compose run --rm setup-generator
+    ./setup.sh
     echo "Setup completed."
 fi
 
