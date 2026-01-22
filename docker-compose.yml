@@ -4,11 +4,12 @@ services:
     image: alpine:latest
     container_name: setup-generator
     volumes:
-      - .:/workspace
-    working_dir: /workspace
+      - auth-files:/auth
     environment:
       - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      # Optional: Voyage API Key for auto-embedding features
+      - VOYAGE_API_KEY=${VOYAGE_API_KEY:-your_voyage_api_key_here}
     command: >
       sh -c "
         echo 'Setting up security files...';
@@ -16,11 +17,12 @@ services:
         echo 'Mongot password: [HIDDEN]';
         
         # Generate keyfile if it doesn't exist
-        if [ ! -f keyfile ]; then
+        if [ ! -f /auth/keyfile ]; then
           echo 'Generating keyfile...';
           apk add --no-cache openssl;
-          openssl rand -base64 756 > keyfile;
-          chmod 400 keyfile;
+          openssl rand -base64 756 > /auth/keyfile;
+          chmod 400 /auth/keyfile;
+          chown 101:101 /auth/keyfile;
           echo 'Keyfile generated successfully';
         else
           echo 'Keyfile already exists, skipping generation';
@@ -28,10 +30,22 @@ services:
         
         # Create password file with specified password
         echo 'Creating password file...';
-        echo -n "$MONGOT_PASSWORD" > passwordFile;
-        chmod 600 passwordFile;
+        echo -n \"$MONGOT_PASSWORD\" > /auth/passwordFile;
+        chmod 600 /auth/passwordFile;
+        chown 101:101 /auth/passwordFile;
         echo 'Password file created successfully';
         
+        # If VOYAGE_API_KEY is provided, create the query and indexing key files
+        if [ -n \"$VOYAGE_API_KEY\" ]; then
+          echo 'Creating Voyage API key files...';
+          echo -n \"$VOYAGE_API_KEY\" > /auth/voyage-api-query-key;
+          echo -n \"$VOYAGE_API_KEY\" > /auth/voyage-api-indexing-key;
+          chmod 600 /auth/voyage-api-query-key /auth/voyage-api-indexing-key;
+          chown 101:101 /auth/voyage-api-query-key /auth/voyage-api-indexing-key;
+          echo 'Voyage API key files created successfully';
+        else
+          echo 'No VOYAGE_API_KEY provided, skipping Voyage API key file creation';
+        fi;
         echo 'Setup completed successfully';
       "
     restart: "no"
@@ -56,7 +70,7 @@ services:
       - mongod_data:/data/db
       - mongod_configdb:/data/configdb
       - ./mongod.conf:/etc/mongod.conf:ro
-      - ./keyfile:/keyfile:ro
+      - auth-files:/auth
       - ./sampledata.archive:/sampledata.archive:ro
       - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
     networks:
@@ -78,7 +92,7 @@ services:
     volumes:
       - mongot_data:/data/mongot
       - ./mongot.conf:/mongot-community/config.default.yml:ro
-      - ./passwordFile:/passwordFile:ro
+      - auth-files:/auth
     networks:
       - search-community
     depends_on:
@@ -165,9 +179,10 @@ volumes:
   mongod_data:
   mongod_configdb:
   mongot_data:
+  auth-files:
 
 networks:
   search-community:
     name: search-community
     driver: bridge
-    external: true
+    # external: true
