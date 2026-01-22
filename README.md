@@ -107,9 +107,7 @@ The Docker Compose setup handles the following automatically:
 ## Configuration Files
 
 - `mongod.conf`: MongoDB server configuration
-- `mongot.conf`: MongoDB Atlas Search configuration  
-- `passwordFile`: Auto-generated file containing the mongot user password
-- `keyfile`: Auto-generated replica set keyfile
+- `mongot.conf`: MongoDB Atlas Search configuration
 - `init-mongo.sh`: Initialization script for user creation and data loading
 
 ## Service Architecture
@@ -132,6 +130,7 @@ This design separates concerns cleanly: setup is a one-time utility, while the m
 # Step 1: Export passwords as environment variables (you can change these)
 export ADMIN_PASSWORD="admin"
 export MONGOT_PASSWORD="mongotPassword"
+export VOYAGE_API_KEY="" # If you are using auto-embedding feature
 
 # Step 2: Generate security files (uses passwords above)
  docker compose --profile setup run --rm setup-generator
@@ -212,13 +211,13 @@ docker compose --profile setup run --rm setup-generator
 
 ### Reset Everything
 ```bash
-# Stop and remove all data
+# Stop and remove auth files
 docker compose down -v
-rm -rf keyfile passwordFile
+docker volume rm auth-files
 
 # Start fresh with default passwords
 export ADMIN_PASSWORD="admin"
-exort MONGOT_PASSWORD="mongotPassword"
+export MONGOT_PASSWORD="mongotPassword"
 docker compose --profile setup run --rm setup-generator
 docker compose up -d
 ```
@@ -229,8 +228,8 @@ To change passwords, stop services, regenerate the password file, and restart:
 # Stop current services
 docker compose down
 
-# Remove password file (keyfile can remain)
-rm passwordFile
+# Remove auth files
+docker volume rm auth-files
 
 # Regenerate password file with new password
 export ADMIN_PASSWORD="newAdminPass" MONGOT_PASSWORD="newMongotPass" && docker compose --profile setup run --rm setup-generator
