@@ -24,17 +24,20 @@ curl  https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.
 
 ### Default Setup (default passwords)
 
-The setup process is now a simple two-step workflow:
+The setup process is now a simple three-step workflow:
 
 ```bash
 # Step 1: Generate security files (keyfile and passwordFile)
 export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator
 
-# Step 2: Start all services
+# Step 2: Create network (this is performed automatically by the start-monitoring.sh script)
+docker network create search-community
+
+# Step 3: Start all services
 docker compose up mongod mongot -d
 
-# Or combine both steps (but step-by-step is recommended for clarity)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator && docker compose up mongod mongot -d
+# Or combine all steps (but step-by-step is recommended for clarity)
+export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator && docker network create search-community && docker compose up mongod mongot -d
 ```
 
 ### With Auto-Embedding
@@ -48,6 +51,9 @@ export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword"
 
 # Run setup
 docker compose --profile setup run --rm setup-generator
+
+# Create network
+docker network create search-community
 
 # Start MongoDB services
 docker compose up mongod mongot -d
@@ -66,7 +72,10 @@ Set your own passwords by passing environment variables:
 # Step 1: Generate security files with custom passwords
 export ADMIN_PASSWORD="mySecureAdminPass" MONGOT_PASSWORD="mySecureMongotPass" && docker compose --profile setup run --rm setup-generator
 
-# Step 2: Start services
+# Step 2: Create network
+docker network create search-community
+
+# Step 3: Start services
 docker compose up -d
 ```
 
@@ -260,14 +269,9 @@ docker compose up -d
 - This happens when running `docker compose up` before running the setup phase
 - Solution: Run setup first: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
 
-**Services won't start**
-- Check if keyfile and passwordFile exist: `ls -la keyfile passwordFile`
-- If missing, run setup: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
-- Then start services: `docker compose up -d`
-
 **MongoDB authentication errors**
 - Ensure the passwordFile contains the correct mongot password
-- Regenerate if needed: `rm passwordFile && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
+- Regenerate if needed: `docker volume rm auth-files && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
 
 ## Network Configuration
 
@@ -439,6 +443,7 @@ curl http://localhost:9090/api/v1/targets
 - **MongoDB Exporter fails**: Check MongoDB authentication and connectivity
 - **Mongot metrics unavailable**: Verify mongot service is healthy at http://localhost:8080
 - **Grafana dashboards empty**: Ensure Prometheus is successfully scraping both targets
+- **Docker network not found or already exists**: The docker compose file automatically looks for an external `search-community` network. If it doesn't exist create it with `docker network create search-community`
 
 ### Stop ALL Services
 ```bash
