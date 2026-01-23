@@ -185,4 +185,4 @@ networks:
   search-community:
     name: search-community
     driver: bridge
-    # external: true
+    external: true

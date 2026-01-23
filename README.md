@@ -37,6 +37,22 @@ docker compose up mongod mongot -d
 export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator && docker compose up mongod mongot -d
 ```
 
+### With Auto-Embedding
+https://www.mongodb.com/docs/manual/administration/install-community/?operating-system=docker&search-docker=with-search-docker#specify-your-search-configuration-options.
+```bash
+# Set your Voyage API key
+export VOYAGE_API_KEY="" # Put your value here
+
+# Export variables for auth files
+export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword"
+
+# Run setup
+docker compose --profile setup run --rm setup-generator
+
+# Start MongoDB services
+docker compose up mongod mongot -d
+```
+
 ### With monitoring
 You can also start the system with Prometheus and Grafana for monitoring. See [Prometheus Monitoring Setup](#prometheus-monitoring-setup)
 
