@@ -24,7 +24,7 @@ echo "  Mongot User: [HIDDEN]"
 echo "  Grafana Admin: [HIDDEN]"
 
 # Run setup first if auth-files volume is empty
-if [ ! "$(docker volume inspect auth-files --format '{{ .Mountpoint }}' | xargs ls -A)" ]; then
+if [ ! "$(docker volume inspect mdb-community-search_auth-files --format '{{ .Mountpoint }}' | xargs ls -A)" ]; then
     echo "Running initial setup..."
     docker compose run --rm setup-generator
     echo "Setup completed."

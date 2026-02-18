@@ -238,7 +238,7 @@ docker compose --profile setup run --rm setup-generator
 ```bash
 # Stop and remove auth files
 docker compose down -v
-docker volume rm auth-files
+docker volume rm mdb-community-search_auth-files
 
 # Start fresh with default passwords
 export ADMIN_PASSWORD="admin"
@@ -254,7 +254,7 @@ To change passwords, stop services, regenerate the password file, and restart:
 docker compose down
 
 # Remove auth files
-docker volume rm auth-files
+docker volume rm mdb-community-search_auth-files
 
 # Regenerate password file with new password
 export ADMIN_PASSWORD="newAdminPass" MONGOT_PASSWORD="newMongotPass" && docker compose --profile setup run --rm setup-generator
@@ -271,7 +271,7 @@ docker compose up -d
 
 **MongoDB authentication errors**
 - Ensure the passwordFile contains the correct mongot password
-- Regenerate if needed: `docker volume rm auth-files && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
+- Regenerate if needed: `docker volume rm mdb-community-search_auth-files && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
 
 ## Network Configuration
 
