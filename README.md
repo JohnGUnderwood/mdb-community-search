@@ -228,7 +228,7 @@ docker compose logs setup-generator
 If you encounter keyfile permission issues:
 ```bash
 # Regenerate keyfile and passwordFile (change passwords if necessary)
-rm keyfile passwordFile
+docker volume rm mdb-community-search_auth-files
 export ADMIN_PASSWORD="admin"
 export MONGOT_PASSWORD="mongotPassword"
 docker compose --profile setup run --rm setup-generator
