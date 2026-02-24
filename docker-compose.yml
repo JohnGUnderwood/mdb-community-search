@@ -9,7 +9,7 @@ services:
       - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       # Optional: Voyage API Key for auto-embedding features
-      # - VOYAGE_API_KEY=${VOYAGE_API_KEY:-your_voyage_api_key_here}
+      # - VOYAGE_API_KEY=${VOYAGE_API_KEY}
     command: >
       sh -c "
         echo 'Setting up security files...';

@@ -41,14 +41,39 @@ export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose
 ```
 
 ### With Auto-Embedding
-https://www.mongodb.com/docs/manual/administration/install-community/?operating-system=docker&search-docker=with-search-docker#specify-your-search-configuration-options.
+[Create a Voyage API key](https://www.mongodb.com/docs/voyageai/management/api-keys/?client-curl-default=curl#std-label-voyage-api-keys) and set the environment variable. 
 ```bash
 # Set your Voyage API key
 export VOYAGE_API_KEY="" # Put your value here
 
 # Export variables for auth files
 export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword"
-
+```
+Uncomment the appropriate lines in the [docker-compose yaml](https://github.com/JohnGUnderwood/mdb-community-search/blob/main/docker-compose.yml#L12)...
+```yaml
+setup-generator:
+    image: alpine:latest
+    container_name: setup-generator
+    volumes:
+      - auth-files:/auth
+    environment:
+      - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      # Optional: Voyage API Key for auto-embedding features
+      # - VOYAGE_API_KEY=${VOYAGE_API_KEY}
+```
+...and [Mongot config](https://github.com/JohnGUnderwood/mdb-community-search/blob/main/mongot.conf#L21-L26).
+```conf
+# mongot.conf
+embedding:
+  queryKeyFile: /auth/voyage-api-query-key
+  indexingKeyFile: /auth/voyage-api-indexing-key
+  providerEndpoint: https://ai.mongodb.com/v1/embeddings 
+  isAutoEmbeddingViewWriter: true # Designate this as leader instance for writing the automated embedding to the View.
+```
+Auto-embedding docs are [here](https://www.mongodb.com/docs/manual/administration/install-community/?operating-system=docker&search-docker=with-search-docker#search-and-vector-search-with-automated-embedding-10).
+Run setup.
+```bash
 # Run setup
 docker compose --profile setup run --rm setup-generator
 
