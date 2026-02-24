@@ -31,7 +31,7 @@ services:
         # Create password file if it doesn't exist
         if [ ! -f /auth/passwordFile ]; then
           echo 'Creating password file...';
-          echo -n \"$MONGOT_PASSWORD\" > /auth/passwordFile;
+          echo -n \"$$MONGOT_PASSWORD\" > /auth/passwordFile;
           chmod 600 /auth/passwordFile;
           chown 101:101 /auth/passwordFile;
           echo 'Password file created successfully';
