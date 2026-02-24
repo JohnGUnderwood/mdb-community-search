@@ -9,7 +9,7 @@ services:
       - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       # Optional: Voyage API Key for auto-embedding features
-      - VOYAGE_API_KEY=${VOYAGE_API_KEY:-your_voyage_api_key_here}
+      # - VOYAGE_API_KEY=${VOYAGE_API_KEY:-your_voyage_api_key_here}
     command: >
       sh -c "
         echo 'Setting up security files...';
@@ -28,12 +28,16 @@ services:
           echo 'Keyfile already exists, skipping generation';
         fi;
         
-        # Create password file with specified password
-        echo 'Creating password file...';
-        echo -n \"$MONGOT_PASSWORD\" > /auth/passwordFile;
-        chmod 600 /auth/passwordFile;
-        chown 101:101 /auth/passwordFile;
-        echo 'Password file created successfully';
+        # Create password file if it doesn't exist
+        if [ ! -f /auth/passwordFile ]; then
+          echo 'Creating password file...';
+          echo -n \"$MONGOT_PASSWORD\" > /auth/passwordFile;
+          chmod 600 /auth/passwordFile;
+          chown 101:101 /auth/passwordFile;
+          echo 'Password file created successfully';
+        else
+          echo 'Password file already exists, skipping creation';
+        fi;
         
         # If VOYAGE_API_KEY is provided, create the query and indexing key files
         if [ -n \"$VOYAGE_API_KEY\" ]; then
