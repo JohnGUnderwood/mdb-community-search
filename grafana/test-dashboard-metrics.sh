@@ -5,6 +5,26 @@
 echo "🔍 Testing Dashboard Metrics..."
 echo "================================"
 
+# In no-data mode, a query is considered valid if Prometheus executes it successfully,
+# even when it returns no time series yet.
+ALLOW_NO_DATA="${ALLOW_NO_DATA:-true}"
+for arg in "$@"; do
+    case "$arg" in
+        --allow-no-data)
+            ALLOW_NO_DATA="true"
+            ;;
+        --strict)
+            ALLOW_NO_DATA="false"
+            ;;
+    esac
+done
+
+if [[ "$ALLOW_NO_DATA" == "true" ]]; then
+    echo "ℹ️  Running in no-data mode (empty results are allowed)"
+else
+    echo "ℹ️  Running in strict mode (metrics must return valid values)"
+fi
+
 # Initialize failure counter
 FAILED_TESTS=0
 
@@ -71,6 +91,10 @@ test_metric_smart() {
     local result_count=$(echo "$response" | jq -r '.data.result | length')
     
     if [[ "$result_count" -eq 0 ]]; then
+        if [[ "$ALLOW_NO_DATA" == "true" ]]; then
+            echo "✅ Available (no data yet)"
+            return 0
+        fi
         if [[ "$optional" == "true" ]]; then
             echo "❌ Not available (optional - no results)"
         else
@@ -96,6 +120,10 @@ test_metric_smart() {
             echo "✅ Available (${result_count} series)"
             return 0
         else
+            if [[ "$ALLOW_NO_DATA" == "true" ]]; then
+                echo "✅ Available (series present, values not ready yet)"
+                return 0
+            fi
             if [[ "$optional" == "true" ]]; then
                 echo "❌ Not available (optional - no valid values)"
             else
@@ -111,6 +139,10 @@ test_metric_smart() {
             echo "✅ Available"
             return 0
         else
+            if [[ "$ALLOW_NO_DATA" == "true" ]]; then
+                echo "✅ Available (value not ready yet)"
+                return 0
+            fi
             if [[ "$optional" == "true" ]]; then
                 echo "❌ Not available (optional - no valid value)"
             else
@@ -183,6 +215,8 @@ else
     echo "   2. Check that Prometheus is scraping metrics successfully"
     echo "   3. Verify MongoDB exporter is configured correctly"
     echo "   4. Run ./test-monitoring.sh to check basic connectivity"
+    echo "   5. If there is no traffic yet, run with --allow-no-data"
+    echo "   6. For strict checks after generating data, run with --strict"
     echo ""
     echo "📊 Dashboard may not display correctly until all metrics are available."
     exit 1

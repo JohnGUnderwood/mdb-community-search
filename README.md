@@ -350,6 +350,9 @@ This provides:
 # Test dashboard metrics availability (run automatically on startup) 
 ./grafana/test-dashboard-metrics.sh
 
+# Run strict dashboard metric validation (expects real metric values)
+./grafana/test-dashboard-metrics.sh --strict
+
 # Generate sample activity to populate dashboard metrics
 ./generate-metrics.sh
 ```

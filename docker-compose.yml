@@ -40,10 +40,10 @@ services:
         fi;
         
         # If VOYAGE_API_KEY is provided, create the query and indexing key files
-        if [ -n \"$VOYAGE_API_KEY\" ]; then
+        if [ -n \"$$VOYAGE_API_KEY\" ]; then
           echo 'Creating Voyage API key files...';
-          echo -n \"$VOYAGE_API_KEY\" > /auth/voyage-api-query-key;
-          echo -n \"$VOYAGE_API_KEY\" > /auth/voyage-api-indexing-key;
+          echo -n \"$$VOYAGE_API_KEY\" > /auth/voyage-api-query-key;
+          echo -n \"$$VOYAGE_API_KEY\" > /auth/voyage-api-indexing-key;
           chmod 600 /auth/voyage-api-query-key /auth/voyage-api-indexing-key;
           chown 101:101 /auth/voyage-api-query-key /auth/voyage-api-indexing-key;
           echo 'Voyage API key files created successfully';
