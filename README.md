@@ -24,17 +24,64 @@ curl  https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.
 
 ### Default Setup (default passwords)
 
-The setup process is now a simple two-step workflow:
+The setup process is now a simple three-step workflow:
 
 ```bash
 # Step 1: Generate security files (keyfile and passwordFile)
 export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator
 
-# Step 2: Start all services
+# Step 2: Create network (this is performed automatically by the start-monitoring.sh script)
+docker network create search-community
+
+# Step 3: Start all services
 docker compose up mongod mongot -d
 
-# Or combine both steps (but step-by-step is recommended for clarity)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator && docker compose up mongod mongot -d
+# Or combine all steps (but step-by-step is recommended for clarity)
+export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator && docker network create search-community && docker compose up mongod mongot -d
+```
+
+### With Auto-Embedding
+[Create a Voyage API key](https://www.mongodb.com/docs/voyageai/management/api-keys/?client-curl-default=curl#std-label-voyage-api-keys) and set the environment variable. 
+```bash
+# Set your Voyage API key
+export VOYAGE_API_KEY="" # Put your value here
+
+# Export variables for auth files
+export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword"
+```
+Uncomment the appropriate lines in the [docker-compose yaml](https://github.com/JohnGUnderwood/mdb-community-search/blob/main/docker-compose.yml#L12)...
+```yaml
+setup-generator:
+    image: alpine:latest
+    container_name: setup-generator
+    volumes:
+      - auth-files:/auth
+    environment:
+      - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+      # Optional: Voyage API Key for auto-embedding features
+      # - VOYAGE_API_KEY=${VOYAGE_API_KEY}
+```
+...and [Mongot config](https://github.com/JohnGUnderwood/mdb-community-search/blob/main/mongot.conf#L21-L26).
+```conf
+# mongot.conf
+embedding:
+  queryKeyFile: /auth/voyage-api-query-key
+  indexingKeyFile: /auth/voyage-api-indexing-key
+  providerEndpoint: https://ai.mongodb.com/v1/embeddings 
+  isAutoEmbeddingViewWriter: true # Designate this as leader instance for writing the automated embedding to the View.
+```
+Auto-embedding docs are [here](https://www.mongodb.com/docs/manual/administration/install-community/?operating-system=docker&search-docker=with-search-docker#search-and-vector-search-with-automated-embedding-10).
+Run setup.
+```bash
+# Run setup
+docker compose --profile setup run --rm setup-generator
+
+# Create network
+docker network create search-community
+
+# Start MongoDB services
+docker compose up mongod mongot -d
 ```
 
 ### With monitoring
@@ -50,7 +97,10 @@ Set your own passwords by passing environment variables:
 # Step 1: Generate security files with custom passwords
 export ADMIN_PASSWORD="mySecureAdminPass" MONGOT_PASSWORD="mySecureMongotPass" && docker compose --profile setup run --rm setup-generator
 
-# Step 2: Start services
+# Step 2: Create network
+docker network create search-community
+
+# Step 3: Start services
 docker compose up -d
 ```
 
@@ -203,7 +253,7 @@ docker compose logs setup-generator
 If you encounter keyfile permission issues:
 ```bash
 # Regenerate keyfile and passwordFile (change passwords if necessary)
-rm keyfile passwordFile
+docker volume rm mdb-community-search_auth-files
 export ADMIN_PASSWORD="admin"
 export MONGOT_PASSWORD="mongotPassword"
 docker compose --profile setup run --rm setup-generator
@@ -213,7 +263,7 @@ docker compose --profile setup run --rm setup-generator
 ```bash
 # Stop and remove auth files
 docker compose down -v
-docker volume rm auth-files
+docker volume rm mdb-community-search_auth-files
 
 # Start fresh with default passwords
 export ADMIN_PASSWORD="admin"
@@ -229,7 +279,7 @@ To change passwords, stop services, regenerate the password file, and restart:
 docker compose down
 
 # Remove auth files
-docker volume rm auth-files
+docker volume rm mdb-community-search_auth-files
 
 # Regenerate password file with new password
 export ADMIN_PASSWORD="newAdminPass" MONGOT_PASSWORD="newMongotPass" && docker compose --profile setup run --rm setup-generator
@@ -244,14 +294,9 @@ docker compose up -d
 - This happens when running `docker compose up` before running the setup phase
 - Solution: Run setup first: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
 
-**Services won't start**
-- Check if keyfile and passwordFile exist: `ls -la keyfile passwordFile`
-- If missing, run setup: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
-- Then start services: `docker compose up -d`
-
 **MongoDB authentication errors**
 - Ensure the passwordFile contains the correct mongot password
-- Regenerate if needed: `rm passwordFile && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
+- Regenerate if needed: `docker volume rm mdb-community-search_auth-files && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
 
 ## Network Configuration
 
@@ -329,6 +374,9 @@ This provides:
 
 # Test dashboard metrics availability (run automatically on startup) 
 ./grafana/test-dashboard-metrics.sh
+
+# Run strict dashboard metric validation (expects real metric values)
+./grafana/test-dashboard-metrics.sh --strict
 
 # Generate sample activity to populate dashboard metrics
 ./generate-metrics.sh
@@ -423,6 +471,7 @@ curl http://localhost:9090/api/v1/targets
 - **MongoDB Exporter fails**: Check MongoDB authentication and connectivity
 - **Mongot metrics unavailable**: Verify mongot service is healthy at http://localhost:8080
 - **Grafana dashboards empty**: Ensure Prometheus is successfully scraping both targets
+- **Docker network not found or already exists**: The docker compose file automatically looks for an external `search-community` network. If it doesn't exist create it with `docker network create search-community`
 
 ### Stop ALL Services
 ```bash

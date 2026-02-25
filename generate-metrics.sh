@@ -64,15 +64,15 @@ try {
                   }
                 ],
                 'plot_embedding_voyage_3_large': {
-                  'type': 'knnVector',
-                  'dimensions': 2048,
+                  'type': 'vector',
+                  'numDimensions': 2048,
                   'similarity': 'dotProduct'
                 }
               }
             }
           }
         );
-        print('✅ Text search index created on sample_mflix.embedded_movies with autocomplete on title and knnVector on plot_embedding_voyage_3_large');
+        print('✅ Text search index created on sample_mflix.embedded_movies with autocomplete on title and vector on plot_embedding_voyage_3_large');
       } else {
         print('✅ Text search index already exists on sample_mflix.embedded_movies');
       }
@@ -358,7 +358,7 @@ for i in {1..3}; do
 done
 
 echo ""
-echo "� Running \$search.knnBeta queries to populate candidates and limit metrics..."
+echo "� Running \$search.vectorSearch queries to populate candidates and limit metrics..."
 
 # Run vector search queries with different limits and parameters in a single session
 docker exec mongod-community mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix --eval "
@@ -380,21 +380,21 @@ if (sampleMovies.length > 0) {
     const queryMovie = sampleMovies[i % sampleMovies.length];
     
     if (queryMovie.plot_embedding_voyage_3_large) {
-      print('Running knnBeta search query ' + (i+1) + '/' + vectorLimits.length + ' with limit ' + limit + '...');
+      print('Running vectorSearch query ' + (i+1) + '/' + vectorLimits.length + ' with limit ' + limit + '...');
       
       try {
         const result = db.embedded_movies.aggregate([
           {
             \$search: {
               index: 'text_index',
-              knnBeta: {
-                vector: Array.from(queryMovie.plot_embedding_voyage_3_large.toFloat32Array()),
+              vectorSearch: {
+                queryVector: Array.from(queryMovie.plot_embedding_voyage_3_large.toFloat32Array()),
                 path: 'plot_embedding_voyage_3_large',
-                k: limit * 2
+                limit: limit,
+                numCandidates: limit * 2
               }
             }
           },
-          { \$limit: limit },
           {
             \$project: {
               title: 1,
@@ -405,12 +405,12 @@ if (sampleMovies.length > 0) {
           }
         ]).toArray();
         
-        print('  ✅ knnBeta search with limit ' + limit + ' (k: ' + (limit * 2) + ') executed, returned ' + result.length + ' documents');
+        print('  ✅ vectorSearch with limit ' + limit + ' (candidates: ' + (limit * 2) + ') executed, returned ' + result.length + ' documents');
         if (result.length > 0) {
           print('    Best match: ' + result[0].title + ' (score: ' + result[0].score.toFixed(4) + ')');
         }
       } catch (e) {
-        print('  ❌ knnBeta search query failed: ' + e.message);
+        print('  ❌ vectorSearch query failed: ' + e.message);
       }
     } else {
       print('  ⚠️  No embedding found for movie: ' + queryMovie.title);
@@ -484,9 +484,9 @@ if (sampleMovies.length > 0) {
 " --quiet
 
 echo ""
-echo "🎯 Running additional knnBeta search variations with higher k values..."
+echo "🎯 Running additional \$vectorSearch variations with higher k values..."
 
-# Run some knnBeta searches with much higher k values to really populate the metrics
+# Run some vectorSearch queries with much higher k values to really populate the metrics
 docker exec mongod-community mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix --eval "
 // Get a sample movie embedding for high-candidate vector searches
 const sampleMovie = db.embedded_movies.findOne({plot_embedding_voyage_3_large: {\$exists: true}});
@@ -503,37 +503,36 @@ if (sampleMovie && sampleMovie.plot_embedding_voyage_3_large) {
   
   for (let i = 0; i < highCandidateConfigs.length; i++) {
     const config = highCandidateConfigs[i];
-    print('Running high-k knnBeta search: limit=' + config.limit + ', k=' + config.k + '...');
+    print('Running high-k vectorSearch query: limit=' + config.limit + ', numCandidates=' + config.k + '...');
     
     try {
       const result = db.embedded_movies.aggregate([
         {
-          \$search: {
-            index: 'text_index',
-            knnBeta: {
-              vector: Array.from(sampleMovie.plot_embedding_voyage_3_large.toFloat32Array()),
-              path: 'plot_embedding_voyage_3_large',
-              k: config.k
-            }
+          \$vectorSearch: {
+            index: 'vector_index',
+            
+            queryVector: Array.from(sampleMovie.plot_embedding_voyage_3_large.toFloat32Array()),
+            path: 'plot_embedding_voyage_3_large',
+            limit: config.limit,
+            numCandidates: config.k
           }
         },
-        { \$limit: config.limit },
         {
           \$project: {
             title: 1,
             year: 1,
             plot: 1,
-            score: { \$meta: 'searchScore' }
+            score: { \$meta: 'vectorSearchScore' }
           }
         }
       ]).toArray();
       
-      print('  ✅ High-k knnBeta search returned ' + result.length + ' documents');
+      print('  ✅ High-k vectorSearch query returned ' + result.length + ' documents');
       if (result.length > 0) {
         print('    Best match: ' + result[0].title + ' (score: ' + result[0].score.toFixed(4) + ')');
       }
     } catch (e) {
-      print('  ❌ High-k knnBeta search failed: ' + e.message);
+      print('  ❌ High-k vectorSearch query failed: ' + e.message);
     }
   }
 } else {

@@ -23,8 +23,23 @@ echo "  MongoDB Admin: [HIDDEN]"
 echo "  Mongot User: [HIDDEN]"
 echo "  Grafana Admin: [HIDDEN]"
 
-# Run setup first if keyfile doesn't exist
-if [ ! -f keyfile ]; then
+# Returns 0 (true) if Docker volume does not exist or exists but has no files
+is_volume_empty() {
+    local volume_name="$1"
+
+    if ! docker volume inspect "$volume_name" >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if [ -z "$(docker run --rm -v "${volume_name}:/data" alpine sh -c 'ls -A /data 2>/dev/null')" ]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Run setup first if auth-files volume is empty
+if is_volume_empty "mdb-community-search_auth-files"; then
     echo "Running initial setup..."
     docker compose run --rm setup-generator
     echo "Setup completed."
@@ -45,7 +60,7 @@ echo "  Prometheus:        http://localhost:9090"
 echo "  Grafana:          http://localhost:3000 (admin/${GRAFANA_PASSWORD})"
 echo ""
 echo "Waiting for services to be ready..."
-sleep 10
+sleep 30
 
 # Run monitoring tests
 echo ""
@@ -58,8 +73,8 @@ else
     echo "   Run 'chmod +x test-monitoring.sh' to make it executable"
 fi
 
-# First, test that all dashboard metrics are available
-echo "🧪 Running dashboard metrics test to check all dashboard metrics return..."
+# First, test dashboard query availability (no-data tolerant by default)
+echo "🧪 Running dashboard metrics test (no-data mode)..."
 if [ -x "./grafana/test-dashboard-metrics.sh" ]; then
     cd grafana
     ./test-dashboard-metrics.sh
@@ -99,6 +114,22 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "🚀 Generating test metrics..."
     if [ -x "./generate-metrics.sh" ]; then
         ./generate-metrics.sh
+
+        echo ""
+        echo "🧪 Running strict dashboard metrics test after data generation..."
+        if [ -x "./grafana/test-dashboard-metrics.sh" ]; then
+            cd grafana
+            ./test-dashboard-metrics.sh --strict
+            cd ..
+        else
+            echo "⚠️  grafana/test-dashboard-metrics.sh not found or not executable"
+            echo "   Run 'chmod +x grafana/test-dashboard-metrics.sh' to make it executable"
+        fi
+
+        if [ $? -ne 0 ]; then
+            echo "❌ Strict dashboard metrics test failed after data generation."
+            exit 1
+        fi
     else
         echo "⚠️  generate-metrics.sh not found or not executable"
         echo "   Run 'chmod +x generate-metrics.sh' to make it executable"

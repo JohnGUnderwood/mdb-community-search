@@ -658,7 +658,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mongot_index_stats_query_numCandidatesPerQuery{quantile=\"0.5\"}",
+          "expr": "(histogram_quantile(0.5, sum by (le) (rate(mongot_index_stats_query_numCandidatesPerQuery_bucket[$__rate_interval]))) unless (sum(rate(mongot_index_stats_query_numCandidatesPerQuery_count[$__rate_interval])) == 0)) or on() vector(0)",
           "legendFormat": "p50 Candidates",
           "refId": "A"
         },
@@ -667,7 +667,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "mongot_index_stats_query_numCandidatesPerQuery{quantile=\"0.9\"}",
+          "expr": "(histogram_quantile(0.9, sum by (le) (rate(mongot_index_stats_query_numCandidatesPerQuery_bucket[$__rate_interval]))) unless (sum(rate(mongot_index_stats_query_numCandidatesPerQuery_count[$__rate_interval])) == 0)) or on() vector(0)",
           "legendFormat": "p90 Candidates",
           "refId": "B"
         }
