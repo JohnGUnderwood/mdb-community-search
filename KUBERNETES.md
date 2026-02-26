@@ -30,11 +30,35 @@ helm install mongodb-kubernetes mongodb/mongodb-kubernetes \
 
 ## Quick Start Deployment
 
+### Automated Helper Scripts (closest to Docker Compose flow)
+
+```bash
+chmod +x start-monitoring-k8s.sh test-monitoring-k8s.sh
+
+# Apply manifests, wait for core resources, and run monitoring checks
+./start-monitoring-k8s.sh
+
+# Run only monitoring checks (starts temporary port-forwards if needed)
+./test-monitoring-k8s.sh
+
+# Stop local monitoring port-forwards
+./stop-monitoring-k8s.sh
+
+# Optional cleanup modes
+./stop-monitoring-k8s.sh --delete-resources
+./stop-monitoring-k8s.sh --delete-namespace
+```
+
+Environment overrides:
+- `K8S_NAMESPACE` (default: `mongodb`)
+- `ADMIN_PASSWORD` (default: `admin`, used for display/connection hints)
+- `GRAFANA_PASSWORD` (default: `admin`, used for display)
+
 ### Option 1: One-command defaults (recommended)
 
 ```bash
 # Deploy namespace, secrets, MongoDBCommunity, MongoDBSearch, monitoring,
-# Grafana provisioning, and a one-shot metric generation Job
+# and Grafana provisioning
 kubectl apply -k .
 
 # Wait for MongoDBCommunity CR to become Running
@@ -50,8 +74,9 @@ kubectl wait -n mongodb \
 # Show core resources
 kubectl get mdbc,mdbs,pods -n mongodb
 
-# Watch the metric generation job complete
-kubectl logs -n mongodb job/mongodb-generate-metrics -f
+# Generate metrics locally (optional)
+kubectl port-forward -n mongodb svc/mongodb-svc 27017:27017
+MONGO_HOST=localhost:27017 ./scripts/generate-metrics.sh k8s
 ```
 
 ### Option 2: With Custom Passwords
@@ -61,7 +86,7 @@ kubectl logs -n mongodb job/mongodb-generate-metrics -f
 kubectl create namespace mongodb
 
 # Create secrets with custom passwords (will override defaults)
-kubectl create secret generic mdb-admin-user-password \
+kubectl create secret generic admin-user-password \
   --from-literal=password=YOUR_ADMIN_PASSWORD \
   -n mongodb
 
@@ -83,9 +108,6 @@ kubectl apply -k .
 # Show CR and pod state
 kubectl get mdbc,mdbs,pods -n mongodb
 
-# Check job status (should complete once metrics are generated)
-kubectl get jobs -n mongodb
-
 # Inspect operator-managed status
 kubectl describe mdbc mongodb -n mongodb
 kubectl describe mdbs mongodb -n mongodb
@@ -93,50 +115,57 @@ kubectl describe mdbs mongodb -n mongodb
 # Port forward to test
 kubectl port-forward -n mongodb svc/mongodb-svc 27017:27017
 # In another terminal:
-mongosh "mongodb://mdb-admin:admin@localhost:27017/admin?authSource=admin"
+mongosh "mongodb://admin:admin@localhost:27017/admin?authSource=admin"
 ```
 
 ## Optional: Restore Sample Data
 
-The metric generation Job automatically seeds minimal test data so dashboards populate without external data. For full MongoDB sample datasets:
+To load full MongoDB sample datasets, use the restore Job below:
 
 ### Using sampledata.archive
 
-1. Download the archive (one-time, ~50MB):
+1. Download the archive (one-time, ~50MB) to the repository root:
 ```bash
+cd /Users/junderwood/GitHub/mdb-community-search
 curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
 ```
 
-2. Create a volume to mount it into the Job. For local clusters (Docker Desktop), use a `hostPath`:
-```bash
-# Make the file accessible from the cluster
-mkdir -p /tmp/mongodb-data
-cp sampledata.archive /tmp/mongodb-data/
-```
+2. Update `kubernetes/05-restore-sample-data-job.yml` to bind-mount the archive from your repository root.
 
-3. Modify `kubernetes/06-restore-sample-data-job.yml` to mount your archive:
+Find the `volumes` section (at the bottom) and replace `emptyDir: {}` with:
 ```yaml
 volumes:
   - name: sample-archive
     hostPath:
-      path: /tmp/mongodb-data  # or your actual path
+      path: /Users/junderwood/GitHub/mdb-community-search
       type: Directory
 ```
+(Replace the path with your actual repository root directory)
 
-4. Run the restore Job:
+3. Run the restore Job:
 ```bash
-kubectl apply -f kubernetes/06-restore-sample-data-job.yml
+kubectl apply -f kubernetes/05-restore-sample-data-job.yml
 kubectl logs -n mongodb job/mongodb-restore-sample-data -f
 ```
 
-The Job will check if data already exists and skip restore if not needed. Use `kubectl delete job -n mongodb mongodb-restore-sample-data` to re-run.
+The Job will:
+- Look for `sampledata.archive` in the mounted `/mnt/sample-data` directory
+- Skip gracefully if the archive is not found (not an error—metrics Job data already works)
+- Check if sample data already exists and skip restore if present
+- Restore all sample databases when the archive is available
+
+To re-run after deletion:
+```bash
+kubectl delete job -n mongodb mongodb-restore-sample-data
+kubectl apply -f kubernetes/05-restore-sample-data-job.yml
+```
 
 ## Access Services
 
 ### MongoDB
 ```bash
 kubectl port-forward -n mongodb svc/mongodb-svc 27017:27017
-# Connection string: mongodb://mdb-admin:admin@localhost:27017/admin?authSource=admin
+# Connection string: mongodb://admin:admin@localhost:27017/admin?authSource=admin
 ```
 
 ### Prometheus
@@ -156,7 +185,7 @@ kubectl port-forward -n mongodb svc/grafana 3000:3000
 ## Sample Data
 
 ### Automatic Seed Data
-The `mongodb-generate-metrics` Job automatically seeds the `sample_mflix.embedded_movies` collection with 4 test documents. This is sufficient to populate dashboard metrics and test search functionality.
+The local metrics script `scripts/generate-metrics.sh` will create search indexes and run sample queries against `sample_mflix` to populate dashboard metrics.
 
 ### Optional: Restore Full Sample Datasets
 
@@ -164,12 +193,11 @@ To restore the complete MongoDB sample datasets (sample_airbnb, sample_mflix, et
 
 ## Re-run Metric Generation (Optional)
 
-The `mongodb-generate-metrics` Job runs automatically on deploy and exits after generating traffic.
+Run metrics generation locally using the shared script with the `k8s` runtime argument.
 
 ```bash
-kubectl delete job -n mongodb mongodb-generate-metrics
-kubectl apply -f kubernetes/05-generate-metrics-job.yml
-kubectl logs -n mongodb job/mongodb-generate-metrics -f
+kubectl port-forward -n mongodb svc/mongodb-svc 27017:27017
+MONGO_HOST=localhost:27017 ./scripts/generate-metrics.sh k8s
 ```
 
 ## Cleanup

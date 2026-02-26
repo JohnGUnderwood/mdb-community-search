@@ -17,11 +17,11 @@ spec:
       enabled: false
 
   users:
-    - name: mdb-admin
+    - name: admin
       db: admin
       passwordSecretRef:
-        name: mdb-admin-user-password
-      scramCredentialsSecretName: mdb-admin-user
+        name: admin-user-password
+      scramCredentialsSecretName: admin-user
       roles:
         - name: root
           db: admin

@@ -5,13 +5,45 @@
 
 # Set default passwords from environment variables
 ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+RUNTIME=${1:-compose}
+
+if [ "${RUNTIME}" != "compose" ] && [ "${RUNTIME}" != "k8s" ]; then
+  echo "Usage: $0 [compose|k8s]"
+  exit 1
+fi
+
+if [ "${RUNTIME}" = "k8s" ]; then
+  MONGO_HOST=${MONGO_HOST:-mongodb-svc:27017}
+  MONGO_URI=${MONGO_URI:-mongodb://admin:${ADMIN_PASSWORD}@${MONGO_HOST}/admin?authSource=admin}
+  MONGO_SAMPLE_URI=${MONGO_SAMPLE_URI:-mongodb://admin:${ADMIN_PASSWORD}@${MONGO_HOST}/sample_mflix?authSource=admin}
+fi
+
+run_mongosh_admin() {
+  if [ "${RUNTIME}" = "compose" ]; then
+    docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin "$@"
+  else
+    mongosh "${MONGO_URI}" "$@"
+  fi
+}
+
+run_mongosh_sample() {
+  if [ "${RUNTIME}" = "compose" ]; then
+    docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix "$@"
+  else
+    mongosh "${MONGO_SAMPLE_URI}" "$@"
+  fi
+}
 
 echo "🔍 Generating Search Activity for Dashboard Demo..."
 echo "=================================================="
 
 # Check if MongoDB is accessible
-if ! docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
-  echo "❌ MongoDB is not accessible. Make sure the stack is running with: docker compose up -d"
+if ! run_mongosh_admin --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
+  if [ "${RUNTIME}" = "compose" ]; then
+    echo "❌ MongoDB is not accessible. Make sure the stack is running with: docker compose up -d"
+  else
+    echo "❌ MongoDB is not accessible at ${MONGO_URI}"
+  fi
   exit 1
 fi
 
@@ -19,7 +51,7 @@ echo "✅ MongoDB is accessible"
 
 # Check if we have sample data
 echo -n "Checking for sample data... "
-DB_COUNT=$(docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "print(db.adminCommand('listDatabases').databases.filter(d => d.name.startsWith('sample')).length)" --quiet)
+DB_COUNT=$(run_mongosh_admin --eval "print(db.adminCommand('listDatabases').databases.filter(d => d.name.startsWith('sample')).length)" --quiet)
 if [ "$DB_COUNT" -gt 0 ]; then
   echo "✅ Found $DB_COUNT sample database(s)"
 else
@@ -29,7 +61,7 @@ fi
 # Create search indexes on the sample databases if they exist
 echo ""
 echo "📊 Creating search indexes..."
-docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+run_mongosh_admin --eval "
 try {
   const dbs = db.adminCommand('listDatabases').databases.map(d => d.name);
   
@@ -146,7 +178,7 @@ for i in "${!QUERIES[@]}"; do
   IFS=':' read -r query limit <<< "${QUERIES[$i]}"
   echo "Running search query $((i+1))/${#QUERIES[@]}: '$query' with limit $limit..."
   
-  docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+  run_mongosh_admin --eval "
   try {
     db = db.getSiblingDB('sample_mflix');
     if (db.embedded_movies.countDocuments() > 0) {
@@ -205,7 +237,7 @@ for query_config in "${MOVIE_QUERIES[@]}"; do
   IFS=':' read -r query limit <<< "$query_config"
   echo "Running movie search: '$query' with limit $limit..."
   
-  docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+  run_mongosh_admin --eval "
   try {
     db = db.getSiblingDB('sample_mflix');
     if (db.embedded_movies.countDocuments() > 0) {
@@ -254,7 +286,7 @@ AUTOCOMPLETE_QUERIES=("star" "the" "love" "war" "dark" "super")
 for query in "${AUTOCOMPLETE_QUERIES[@]}"; do
   echo "Running autocomplete search for: '$query'..."
   
-  docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+  run_mongosh_admin --eval "
   try {
     db = db.getSiblingDB('sample_mflix');
     if (db.embedded_movies.countDocuments() > 0) {
@@ -296,7 +328,7 @@ echo "🔍 Running additional search variations to generate more metric data..."
 for i in {1..3}; do
   echo "Running complex search query $i/3..."
   
-  docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+  run_mongosh_admin --eval "
   try {
     db = db.getSiblingDB('sample_mflix');
     if (db.embedded_movies.countDocuments() > 0) {
@@ -361,7 +393,7 @@ echo ""
 echo "� Running \$search.vectorSearch queries to populate candidates and limit metrics..."
 
 # Run vector search queries with different limits and parameters in a single session
-docker exec mongod-community mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix --eval "
+run_mongosh_sample --eval "
 // Get a few random movie plot embeddings for vector search queries
 print('Getting sample embeddings for vector search...');
 const sampleMovies = db.embedded_movies.aggregate([
@@ -425,7 +457,7 @@ echo ""
 echo "🔬 Running equivalent \$vectorSearch queries with different limits..."
 
 # Run $vectorSearch queries with different limits and parameters in a single session
-docker exec mongod-community mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix --eval "
+run_mongosh_sample --eval "
 // Get a few random movie plot embeddings for vector search queries
 print('Getting sample embeddings for \$vectorSearch...');
 const sampleMovies = db.embedded_movies.aggregate([
@@ -487,7 +519,7 @@ echo ""
 echo "🎯 Running additional \$vectorSearch variations with higher k values..."
 
 # Run some vectorSearch queries with much higher k values to really populate the metrics
-docker exec mongod-community mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix --eval "
+run_mongosh_sample --eval "
 // Get a sample movie embedding for high-candidate vector searches
 const sampleMovie = db.embedded_movies.findOne({plot_embedding_voyage_3_large: {\$exists: true}});
 

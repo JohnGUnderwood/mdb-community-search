@@ -75,7 +75,7 @@ fi
 
 # First, test dashboard query availability (no-data tolerant by default)
 echo "🧪 Running dashboard metrics test (no-data mode)..."
-if [ -x "./grafana/test-dashboard-metrics.sh" ]; then
+if [ -x "./scripts/test-dashboard-metrics.sh" ]; then
     cd grafana
     ./test-dashboard-metrics.sh
     cd ..
@@ -112,12 +112,12 @@ echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     echo "🚀 Generating test metrics..."
-    if [ -x "./generate-metrics.sh" ]; then
-        ./generate-metrics.sh
+    if [ -x "./scripts/generate-metrics.sh" ]; then
+        ./scripts/generate-metrics.sh compose
 
         echo ""
         echo "🧪 Running strict dashboard metrics test after data generation..."
-        if [ -x "./grafana/test-dashboard-metrics.sh" ]; then
+        if [ -x "./scripts/test-dashboard-metrics.sh" ]; then
             cd grafana
             ./test-dashboard-metrics.sh --strict
             cd ..
@@ -131,13 +131,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             exit 1
         fi
     else
-        echo "⚠️  generate-metrics.sh not found or not executable"
-        echo "   Run 'chmod +x generate-metrics.sh' to make it executable"
-        echo "   Then run: ./generate-metrics.sh"
+        echo "⚠️  scripts/generate-metrics.sh not found or not executable"
+        echo "   Run 'chmod +x scripts/generate-metrics.sh' to make it executable"
+        echo "   Then run: ./scripts/generate-metrics.sh compose"
     fi
 else
     echo ""
-    echo "💡 To populate your search indexes and metrics with test data later, run: ./generate-metrics.sh"
+    echo "💡 To populate your search indexes and metrics with test data later, run: ./scripts/generate-metrics.sh compose"
 fi
 
 echo ""

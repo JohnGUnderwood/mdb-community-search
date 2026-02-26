@@ -8,9 +8,7 @@ resources:
   - kubernetes/02-mongodb-community.yml
   - kubernetes/03-mongot-deployment.yml
   - kubernetes/04-monitoring.yml
-  - kubernetes/05-generate-metrics-job.yml
-  - kubernetes/06-restore-sample-data-job.yml
-
+  - kubernetes/05-restore-sample-data-job.yml
 
 generatorOptions:
   disableNameSuffixHash: true
@@ -23,9 +21,6 @@ configMapGenerator:
     files:
       - grafana/provisioning/dashboards/dashboards.yml
       - grafana/provisioning/dashboards/mongodb-dashboard.json
-  - name: generate-metrics-script
-    files:
-      - kubernetes/generate-metrics-k8s.sh
 
 labels:
   - includeSelectors: false
