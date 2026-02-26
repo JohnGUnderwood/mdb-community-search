@@ -76,12 +76,12 @@ fi
 # First, test dashboard query availability (no-data tolerant by default)
 echo "🧪 Running dashboard metrics test (no-data mode)..."
 if [ -x "./scripts/test-dashboard-metrics.sh" ]; then
-    cd grafana
+    cd scripts
     ./test-dashboard-metrics.sh
     cd ..
 else
-    echo "⚠️  grafana/test-dashboard-metrics.sh not found or not executable"
-    echo "   Run 'chmod +x grafana/test-dashboard-metrics.sh' to make it executable"
+    echo "⚠️  scripts/test-dashboard-metrics.sh not found or not executable"
+    echo "   Run 'chmod +x scripts/test-dashboard-metrics.sh' to make it executable"
 fi
 
 # Check if the test passed
@@ -118,12 +118,12 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo ""
         echo "🧪 Running strict dashboard metrics test after data generation..."
         if [ -x "./scripts/test-dashboard-metrics.sh" ]; then
-            cd grafana
+            cd scripts
             ./test-dashboard-metrics.sh --strict
             cd ..
         else
-            echo "⚠️  grafana/test-dashboard-metrics.sh not found or not executable"
-            echo "   Run 'chmod +x grafana/test-dashboard-metrics.sh' to make it executable"
+            echo "⚠️  scripts/test-dashboard-metrics.sh not found or not executable"
+            echo "   Run 'chmod +x scripts/test-dashboard-metrics.sh' to make it executable"
         fi
 
         if [ $? -ne 0 ]; then

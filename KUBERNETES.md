@@ -33,13 +33,13 @@ helm install mongodb-kubernetes mongodb/mongodb-kubernetes \
 ### Automated Helper Scripts (closest to Docker Compose flow)
 
 ```bash
-chmod +x start-monitoring-k8s.sh test-monitoring-k8s.sh stop-monitorin-k8s.sh
+chmod +x start-monitoring-k8s.sh test-monitoring.sh stop-monitoring-k8s.sh
 
 # Apply manifests, wait for core resources, and run monitoring checks
 ./start-monitoring-k8s.sh
 
-# Run only monitoring checks (starts temporary port-forwards if needed)
-./test-monitoring-k8s.sh
+# Run shared monitoring checks (start-monitoring-k8s.sh handles port-forwards)
+./test-monitoring.sh
 
 # Stop local monitoring port-forwards
 ./stop-monitoring-k8s.sh

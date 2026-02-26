@@ -13,7 +13,7 @@ scrape_configs:
     fallback_scrape_protocol: 'PrometheusText0.0.4'
 
   # MongoDB Community Server metrics via exporter
-  - job_name: 'mongodb'
+  - job_name: 'mongodb-exporter'
     static_configs:
       - targets: ['mongodb-exporter:9216']
     scrape_interval: 15s

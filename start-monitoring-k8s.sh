@@ -179,11 +179,11 @@ echo "📦 Loading sample data into MongoDB..."
 
 echo ""
 echo "🧪 Running Kubernetes monitoring tests..."
-if [ -x "./test-monitoring-k8s.sh" ]; then
-  ./test-monitoring-k8s.sh
+if [ -x "./test-monitoring.sh" ]; then
+  ./test-monitoring.sh
 else
-  echo "⚠️  test-monitoring-k8s.sh not found or not executable"
-  echo "   Run 'chmod +x test-monitoring-k8s.sh'"
+  echo "⚠️  test-monitoring.sh not found or not executable"
+  echo "   Run 'chmod +x test-monitoring.sh'"
 fi
 
 echo ""
