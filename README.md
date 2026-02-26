@@ -11,6 +11,10 @@ This Docker Compose configuration provides a complete MongoDB and MongoDB Search
 - [Troubleshooting](#troubleshooting)
 
 ## Quick Start
+Choose your path:
+- Docker Compose (local development): continue with the steps below in this README.
+- Kubernetes (cluster deployment): follow [KUBERNETES.md](KUBERNETES.md).
+
 First pull the latest images for mongodb community server and mongodb community search
 ```bash
 docker pull mongodb/mongodb-community-server:latest

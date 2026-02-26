@@ -33,7 +33,7 @@ helm install mongodb-kubernetes mongodb/mongodb-kubernetes \
 ### Automated Helper Scripts (closest to Docker Compose flow)
 
 ```bash
-chmod +x start-monitoring-k8s.sh test-monitoring-k8s.sh
+chmod +x start-monitoring-k8s.sh test-monitoring-k8s.sh stop-monitorin-k8s.sh
 
 # Apply manifests, wait for core resources, and run monitoring checks
 ./start-monitoring-k8s.sh
@@ -74,9 +74,8 @@ kubectl wait -n mongodb \
 # Show core resources
 kubectl get mdbc,mdbs,pods -n mongodb
 
-# Generate metrics locally (optional)
-kubectl port-forward -n mongodb svc/mongodb-svc 27017:27017
-MONGO_HOST=localhost:27017 ./scripts/generate-metrics.sh k8s
+# Generate metrics in k8s mode (runs mongosh in-pod)
+K8S_NAMESPACE=mongodb ./scripts/generate-metrics.sh k8s
 ```
 
 ### Option 2: With Custom Passwords
@@ -112,10 +111,9 @@ kubectl get mdbc,mdbs,pods -n mongodb
 kubectl describe mdbc mongodb -n mongodb
 kubectl describe mdbs mongodb -n mongodb
 
-# Port forward to test
-kubectl port-forward -n mongodb svc/mongodb-svc 27017:27017
-# In another terminal:
-mongosh "mongodb://admin:admin@localhost:27017/admin?authSource=admin"
+# Verify MongoDB from inside the pod (no local mongosh required)
+kubectl exec -i -n mongodb mongodb-0 -c mongod -- \
+  mongosh -u admin -p "${ADMIN_PASSWORD:-admin}" --authenticationDatabase admin --eval "db.adminCommand('ping')"
 ```
 
 ## Optional: Restore Sample Data
@@ -162,10 +160,17 @@ kubectl apply -f kubernetes/05-restore-sample-data-job.yml
 
 ## Access Services
 
-### MongoDB
+### MongoDB (optional local access)
 ```bash
 kubectl port-forward -n mongodb svc/mongodb-svc 27017:27017
 # Connection string: mongodb://admin:admin@localhost:27017/admin?authSource=admin
+```
+
+For helper scripts in `k8s` mode, MongoDB port-forward is not required because they execute `mongosh`/`mongorestore` inside the pod. The sample-data loader uploads `sampledata.archive` into the `mongod` container first, then runs `mongorestore` using that in-pod file.
+
+Load sample data with the Kubernetes helper script:
+```bash
+K8S_NAMESPACE=mongodb ./scripts/load-sample-data-k8s.sh
 ```
 
 ### Prometheus
@@ -193,11 +198,10 @@ To restore the complete MongoDB sample datasets (sample_airbnb, sample_mflix, et
 
 ## Re-run Metric Generation (Optional)
 
-Run metrics generation locally using the shared script with the `k8s` runtime argument.
+Run metrics generation using the shared script with the `k8s` runtime argument.
 
 ```bash
-kubectl port-forward -n mongodb svc/mongodb-svc 27017:27017
-MONGO_HOST=localhost:27017 ./scripts/generate-metrics.sh k8s
+K8S_NAMESPACE=mongodb ./scripts/generate-metrics.sh k8s
 ```
 
 ## Cleanup

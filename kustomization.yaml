@@ -8,7 +8,6 @@ resources:
   - kubernetes/02-mongodb-community.yml
   - kubernetes/03-mongot-deployment.yml
   - kubernetes/04-monitoring.yml
-  - kubernetes/05-restore-sample-data-job.yml
 
 generatorOptions:
   disableNameSuffixHash: true

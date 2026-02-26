@@ -83,21 +83,6 @@ wait_for_http() {
   return 1
 }
 
-wait_for_tcp_port() {
-  local host="$1"
-  local port="$2"
-  local timeout_seconds="${3:-60}"
-
-  for _ in $(seq 1 "$timeout_seconds"); do
-    if (echo > "/dev/tcp/${host}/${port}") >/dev/null 2>&1; then
-      return 0
-    fi
-    sleep 1
-  done
-
-  return 1
-}
-
 ensure_endpoint() {
   local url="$1"
   local name="$2"
@@ -129,37 +114,6 @@ ensure_endpoint() {
   exit 1
 }
 
-ensure_tcp_endpoint() {
-  local host="$1"
-  local port="$2"
-  local name="$3"
-  local resource="$4"
-  local local_port="$5"
-  local target_port="$6"
-
-  if wait_for_tcp_port "$host" "$port" 1; then
-    echo "✅ $name already reachable at ${host}:${port}"
-    return 0
-  fi
-
-  local log_file
-  log_file="$(mktemp)"
-
-  echo "ℹ️  Starting port-forward for $name ($resource $local_port:$target_port)..."
-  kubectl port-forward -n "$NAMESPACE" "$resource" "$local_port:$target_port" >"$log_file" 2>&1 &
-  local pf_pid=$!
-  PORT_FORWARD_PIDS+=("$pf_pid")
-
-  if wait_for_tcp_port "$host" "$port" 60; then
-    echo "✅ $name reachable at ${host}:${port}"
-    return 0
-  fi
-
-  echo "❌ Failed to expose $name at ${host}:${port}"
-  echo "Port-forward logs:"
-  cat "$log_file"
-  exit 1
-}
 
 echo "Starting MongoDB Community Search on Kubernetes with monitoring..."
 
@@ -198,7 +152,6 @@ kubectl rollout status -n "$NAMESPACE" deployment/prometheus --timeout="$WAIT_TI
 
 echo ""
 echo "Preparing local access to endpoints..."
-ensure_tcp_endpoint "127.0.0.1" "27017" "MongoDB" "svc/mongodb-svc" 27017 27017
 ensure_endpoint "http://localhost:8080/health" "MongoDB Search Health" "svc/mongodb-search-svc" 8080 8080
 ensure_endpoint "http://localhost:9946/metrics" "MongoDB Search Metrics" "svc/mongodb-search-svc" 9946 9946
 ensure_endpoint "http://localhost:9216/metrics" "MongoDB Exporter Metrics" "svc/mongodb-exporter" 9216 9216
@@ -207,12 +160,22 @@ ensure_endpoint "http://localhost:3000" "Grafana" "svc/grafana" 3000 3000
 
 echo ""
 echo "Services available at:"
-echo "  MongoDB:            localhost:27017"
 echo "  MongoDB Search:     http://localhost:8080/health"
 echo "  MongoDB Search Met: http://localhost:9946/metrics"
 echo "  MongoDB Metrics:    http://localhost:9216/metrics"
 echo "  Prometheus:         http://localhost:9090"
 echo "  Grafana:            http://localhost:3000 (admin/${GRAFANA_PASSWORD})"
+
+
+# emoji for loading data
+echo "📦 Loading sample data into MongoDB..."
+  if [ -x "./scripts/load-sample-data-k8s.sh" ]; then
+    K8S_NAMESPACE="$NAMESPACE" ADMIN_PASSWORD="$ADMIN_PASSWORD" ./scripts/load-sample-data-k8s.sh
+  else
+    echo "⚠️  scripts/load-sample-data-k8s.sh not found or not executable"
+    echo "   Run 'chmod +x scripts/load-sample-data-k8s.sh'"
+    exit 1
+  fi
 
 echo ""
 echo "🧪 Running Kubernetes monitoring tests..."
@@ -248,15 +211,8 @@ read -r -p "Generate test metrics? (y/N): " REPLY
 if [[ "$REPLY" =~ ^[Yy]$ ]]; then
   echo ""
   echo "🚀 Running local metric generation script..."
-  if ! mongosh "mongodb://admin:${ADMIN_PASSWORD}@localhost:27017/admin?authSource=admin" --quiet --eval "db.adminCommand('ping').ok" | grep -q "1"; then
-    echo "❌ MongoDB is not reachable on localhost:27017"
-    echo "   Ensure start-monitoring-k8s.sh is still running, or run:"
-    echo "   kubectl port-forward -n $NAMESPACE svc/mongodb-svc 27017:27017"
-    exit 1
-  fi
-
   if [ -x "./scripts/generate-metrics.sh" ]; then
-    MONGO_HOST=localhost:27017 ./scripts/generate-metrics.sh k8s
+    K8S_NAMESPACE="$NAMESPACE" ADMIN_PASSWORD="$ADMIN_PASSWORD" ./scripts/generate-metrics.sh k8s
   else
     echo "⚠️  scripts/generate-metrics.sh not found or not executable"
     echo "   Run 'chmod +x scripts/generate-metrics.sh'"
@@ -277,8 +233,7 @@ if [[ "$REPLY" =~ ^[Yy]$ ]]; then
 else
   echo ""
   echo "💡 To generate metrics later, run:"
-  echo "   kubectl port-forward -n $NAMESPACE svc/mongodb-svc 27017:27017"
-  echo "   MONGO_HOST=localhost:27017 ./scripts/generate-metrics.sh k8s"
+  echo "   K8S_NAMESPACE=$NAMESPACE ./scripts/generate-metrics.sh k8s"
 fi
 
 echo ""
