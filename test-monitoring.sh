@@ -4,6 +4,27 @@
 # This script checks if all metrics endpoints are reachable
 
 FAILED_TESTS=0
+RETRY_ATTEMPTS="${RETRY_ATTEMPTS:-20}"
+RETRY_DELAY_SECONDS="${RETRY_DELAY_SECONDS:-2}"
+
+retry_until_success() {
+    local command="$1"
+    local attempts="${2:-$RETRY_ATTEMPTS}"
+    local delay="${3:-$RETRY_DELAY_SECONDS}"
+
+    local try
+    for try in $(seq 1 "$attempts"); do
+        if eval "$command" >/dev/null 2>&1; then
+            return 0
+        fi
+
+        if [[ "$try" -lt "$attempts" ]]; then
+            sleep "$delay"
+        fi
+    done
+
+    return 1
+}
 
 echo "Testing MongoDB Community Search - Prometheus Setup"
 echo "=================================================="
@@ -13,8 +34,8 @@ test_endpoint() {
     local url=$1
     local name=$2
     echo -n "Testing $name ($url): "
-    
-    if curl -s -f "$url" > /dev/null 2>&1; then
+
+    if retry_until_success "curl -s -f '$url'"; then
         echo "✅ OK"
         return 0
     else
@@ -30,9 +51,8 @@ test_endpoint_with_content() {
     local name=$2
     local expected_content=$3
     echo -n "Testing $name ($url): "
-    
-    response=$(curl -s "$url" 2>/dev/null)
-    if [[ $? -eq 0 ]] && [[ "$response" == *"$expected_content"* ]]; then
+
+    if retry_until_success "response=\$(curl -s '$url' 2>/dev/null) && [[ \"\$response\" == *\"$expected_content\"* ]]"; then
         echo "✅ OK"
         return 0
     else

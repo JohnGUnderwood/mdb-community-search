@@ -54,6 +54,12 @@ Environment overrides:
 - `ADMIN_PASSWORD` (default: `admin`, used for display/connection hints)
 - `GRAFANA_PASSWORD` (default: `admin`, used for display)
 
+Port-forward note:
+- `./start-monitoring-k8s.sh` opens local port-forwards for Search health (`8080`), Search metrics (`9946`), MongoDB exporter (`9216`), Prometheus (`9090`), and Grafana (`3000`).
+- These forwards stay running after setup so `./test-monitoring.sh` can be run separately.
+- Stop them with `./stop-monitoring-k8s.sh`.
+- To make startup behave as one-shot cleanup on exit, run with `KEEP_PORT_FORWARDS=false ./start-monitoring-k8s.sh`.
+
 ### Option 1: One-command defaults (recommended)
 
 ```bash

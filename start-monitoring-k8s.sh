@@ -6,6 +6,7 @@ NAMESPACE="${K8S_NAMESPACE:-mongodb}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
 GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-admin}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-600s}"
+KEEP_PORT_FORWARDS="${KEEP_PORT_FORWARDS:-true}"
 
 PORT_FORWARD_PIDS=()
 
@@ -20,13 +21,55 @@ cleanup() {
     done
   fi
 }
-trap cleanup EXIT
+
+handle_interrupt() {
+  echo ""
+  echo "Interrupted; stopping background port-forwards..."
+  cleanup
+  exit 130
+}
+
+if [[ "$KEEP_PORT_FORWARDS" == "false" ]]; then
+  trap cleanup EXIT
+else
+  trap handle_interrupt INT TERM
+fi
 
 require_command() {
   local command_name="$1"
   if ! command -v "$command_name" >/dev/null 2>&1; then
     echo "❌ Required command not found: $command_name"
     exit 1
+  fi
+}
+
+confirm_kube_context() {
+  local current_context
+  local current_cluster
+  local current_user
+
+  current_context="$(kubectl config current-context 2>/dev/null || true)"
+  if [[ -z "$current_context" ]]; then
+    echo "❌ No active kubectl context found."
+    echo "Set one first with: kubectl config use-context <context-name>"
+    exit 1
+  fi
+
+  current_cluster="$(kubectl config view -o jsonpath="{.contexts[?(@.name=='$current_context')].context.cluster}" 2>/dev/null || true)"
+  current_user="$(kubectl config view -o jsonpath="{.contexts[?(@.name=='$current_context')].context.user}" 2>/dev/null || true)"
+
+  echo ""
+  echo "🔎 Kubernetes context check"
+  echo "  Context:   $current_context"
+  echo "  Cluster:   ${current_cluster:-unknown}"
+  echo "  User:      ${current_user:-unknown}"
+  echo "  Namespace: $NAMESPACE"
+  echo ""
+
+  read -r -p "Proceed with this Kubernetes context? (y/N): " CONTEXT_REPLY
+  if [[ ! "$CONTEXT_REPLY" =~ ^[Yy]$ ]]; then
+    echo "Aborted by user."
+    exit 0
   fi
 }
 
@@ -83,6 +126,21 @@ wait_for_http() {
   return 1
 }
 
+wait_for_prometheus_job_up() {
+  local job_name="$1"
+  local timeout_seconds="${2:-120}"
+
+  for _ in $(seq 1 "$timeout_seconds"); do
+    if curl -s -G "http://localhost:9090/api/v1/query" --data-urlencode "query=up{job=\"$job_name\"}" \
+      | jq -e '.status == "success" and (.data.result | length > 0) and ([.data.result[].value[1] | tonumber] | any(. >= 1))' >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 1
+  done
+
+  return 1
+}
+
 ensure_endpoint() {
   local url="$1"
   local name="$2"
@@ -124,6 +182,9 @@ echo "  Grafana Admin: [HIDDEN]"
 
 require_command kubectl
 require_command curl
+require_command jq
+
+confirm_kube_context
 
 if [ ! -f "kustomization.yaml" ]; then
   echo "❌ Run this script from the repository root (kustomization.yaml not found)."
@@ -157,6 +218,18 @@ ensure_endpoint "http://localhost:9946/metrics" "MongoDB Search Metrics" "svc/mo
 ensure_endpoint "http://localhost:9216/metrics" "MongoDB Exporter Metrics" "svc/mongodb-exporter" 9216 9216
 ensure_endpoint "http://localhost:9090" "Prometheus" "svc/prometheus" 9090 9090
 ensure_endpoint "http://localhost:3000" "Grafana" "svc/grafana" 3000 3000
+
+echo ""
+echo "Waiting for Prometheus scrape targets to report UP..."
+if ! wait_for_prometheus_job_up "mongot" 120; then
+  echo "❌ Prometheus target 'mongot' did not become UP in time."
+  exit 1
+fi
+if ! wait_for_prometheus_job_up "mongodb-exporter" 120; then
+  echo "❌ Prometheus target 'mongodb-exporter' did not become UP in time."
+  exit 1
+fi
+echo "✅ Prometheus scrape targets are UP"
 
 echo ""
 echo "Services available at:"
@@ -203,6 +276,9 @@ echo "📊 Setup complete! You can now:"
 echo "  1. View metrics in Prometheus at http://localhost:9090"
 echo "  2. Open Grafana at http://localhost:3000"
 echo "  3. Inspect MongoDB exporter metrics at http://localhost:9216/metrics"
+if [[ "$KEEP_PORT_FORWARDS" == "true" ]]; then
+  echo "  4. Stop local port-forwards later with ./stop-monitoring-k8s.sh"
+fi
 
 echo ""
 echo "🎯 Would you like to generate test metrics now?"
