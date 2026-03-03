@@ -1,490 +1,108 @@
-# MongoDB Community with Search and Monitoring Docker Compose Setup
+# MongoDB Community with Search and Monitoring
 
-This Docker Compose configuration provides a complete MongoDB and MongoDB Search (mongot) setup with all security prerequisites handled automatically. It will also setup Prometheus and Grafana for monitoring, create search indexes and run test queries to populate metrics.
+A complete MongoDB Community Server and MongoDB Community Search (mongot) setup with optional Prometheus and Grafana monitoring. Supports both Docker Compose for local development and Kubernetes for cluster deployments.
 
-## Table of Contents
-- [Quick Start](#quick-start)
-- [Services](#services)
-- [Configuration Files](#configuration-files)
-- [Commands](#commands)
-- [Prometheus Monitoring Setup](#prometheus-monitoring-setup)
-- [Troubleshooting](#troubleshooting)
+## Features
+
+- **MongoDB Community Server** with replica set configuration and authentication
+- **MongoDB Community Search (mongot)** for Atlas Search capabilities
+- **Prometheus + Grafana** monitoring with pre-built dashboards
+- **Auto-embedding** support via Voyage AI (optional)
+- **Sample data** loading with search indexes and test queries
+- Helper scripts for setup, monitoring, metrics generation, and testing
+
+## Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/) (for Docker Compose deployment)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) + a Kubernetes cluster (for Kubernetes deployment)
+- Sample data archive (optional, but recommended):
+  ```bash
+  curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
+  ```
 
 ## Quick Start
-Choose your path:
-- Docker Compose (local development): continue with the steps below in this README.
-- Kubernetes (cluster deployment): follow [KUBERNETES.md](KUBERNETES.md).
 
-First pull the latest images for mongodb community server and mongodb community search
-```bash
-docker pull mongodb/mongodb-community-server:latest
-docker pull mongodb/mongodb-community-search:latest
-```
-
-Fetch the sample data
-```bash
-curl  https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
-```
-
-### Default Setup (default passwords)
-
-The setup process is now a simple three-step workflow:
+### Docker Compose
 
 ```bash
-# Step 1: Generate security files (keyfile and passwordFile)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator
+cd docker
 
-# Step 2: Create network (this is performed automatically by the start-monitoring.sh script)
-docker network create search-community
-
-# Step 3: Start all services
-docker compose up mongod mongot -d
-
-# Or combine all steps (but step-by-step is recommended for clarity)
-export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator && docker network create search-community && docker compose up mongod mongot -d
-```
-
-### With Auto-Embedding
-[Create a Voyage API key](https://www.mongodb.com/docs/voyageai/management/api-keys/?client-curl-default=curl#std-label-voyage-api-keys) and set the environment variable. 
-```bash
-# Set your Voyage API key
-export VOYAGE_API_KEY="" # Put your value here
-
-# Export variables for auth files
+# Generate security files and start services
 export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword"
-```
-Uncomment the appropriate lines in the [docker-compose yaml](https://github.com/JohnGUnderwood/mdb-community-search/blob/main/docker-compose.yml#L12)...
-```yaml
-setup-generator:
-    image: alpine:latest
-    container_name: setup-generator
-    volumes:
-      - auth-files:/auth
-    environment:
-      - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
-      # Optional: Voyage API Key for auto-embedding features
-      # - VOYAGE_API_KEY=${VOYAGE_API_KEY}
-```
-...and [Mongot config](https://github.com/JohnGUnderwood/mdb-community-search/blob/main/mongot.conf#L21-L26).
-```conf
-# mongot.conf
-embedding:
-  queryKeyFile: /auth/voyage-api-query-key
-  indexingKeyFile: /auth/voyage-api-indexing-key
-  providerEndpoint: https://ai.mongodb.com/v1/embeddings 
-  isAutoEmbeddingViewWriter: true # Designate this as leader instance for writing the automated embedding to the View.
-```
-Auto-embedding docs are [here](https://www.mongodb.com/docs/manual/administration/install-community/?operating-system=docker&search-docker=with-search-docker#search-and-vector-search-with-automated-embedding-10).
-Run setup.
-```bash
-# Run setup
 docker compose --profile setup run --rm setup-generator
-
-# Create network
 docker network create search-community
-
-# Start MongoDB services
 docker compose up mongod mongot -d
 ```
 
-### With monitoring
-You can also start the system with Prometheus and Grafana for monitoring. See [Prometheus Monitoring Setup](#prometheus-monitoring-setup)
+To start with full monitoring (Prometheus + Grafana):
+```bash
+./docker/start-monitoring.sh
+```
 
-**Note**: The default passwords are `admin` for the admin user and `mongotPassword` for the mongot user. You can change these values, but if you do, you'll need to update all subsequent commands that use these passwords.
+See [docker/README.md](docker/README.md) for detailed setup options, auto-embedding configuration, custom passwords, and troubleshooting.
 
-### Custom Passwords
-
-Set your own passwords by passing environment variables:
+### Kubernetes
 
 ```bash
-# Step 1: Generate security files with custom passwords
-export ADMIN_PASSWORD="mySecureAdminPass" MONGOT_PASSWORD="mySecureMongotPass" && docker compose --profile setup run --rm setup-generator
+cd kubernetes
 
-# Step 2: Create network
-docker network create search-community
+# Deploy all resources (requires MongoDB Controllers for Kubernetes)
+kubectl apply -k .
 
-# Step 3: Start services
-docker compose up -d
+# Or use the helper script for full setup with monitoring
+./start-monitoring-k8s.sh
 ```
 
-## What This Does
+See [kubernetes/README.md](kubernetes/README.md) for MCK installation, custom passwords, sample data restore, and detailed instructions.
 
-The Docker Compose setup handles the following automatically:
+## Project Structure
 
-1. **Security Prerequisites**:
-   - Generates a keyfile for replica set authentication if it doesn't exist
-   - Creates a password file with the specified mongot password
-   - Sets proper permissions on security files
-   - Creates the required `mongotUser` with `searchCoordinator` role using specified passwords
-
-2. **Service Orchestration**:
-   - Starts MongoDB with replica set configuration
-   - Waits for MongoDB to be healthy before starting mongot
-   - Loads sample data (if `sampledata.archive` exists)
-   - Configures proper networking between services
-
-3. **Health Checks**:
-   - MongoDB health check to ensure it's ready
-   - Mongot health check to verify search service is running
-
-4. **Password Management**:
-   - Supports custom passwords via environment variables passed to docker compose
-   - Automatically creates password files with specified credentials
-
-## Services
-
-### Setup Generator (setup-generator)
-- **Purpose**: Generates keyfile and passwordFile when needed
-- **Usage**: Only run with `--profile setup` for initial setup or to recreate security files
-- **Container**: `setup-generator` (runs once, exits, and removes container)
-
-### MongoDB (mongod)
-- **Container**: `mongod-community`
-- **Port**: 27017
-- **Admin User**: admin/[ADMIN_PASSWORD] (default: admin/admin)
-- **mongot User**: mongotUser/[MONGOT_PASSWORD] (default: mongotUser/mongotPassword)
-- **Replica Set**: rs0
-- **Data**: Persisted in volume `mongod_data`
-- **Requirements**: Needs keyfile and passwordFile to exist (generated by setup-generator)
-
-### MongoDB Search (mongot)
-- **Container**: `mongot-community`
-- **Ports**: 
-  - 27028 (gRPC server)
-  - 8080 (Health check)
-  - 9946 (Metrics)
-- **Data**: Persisted in volume `mongot_data`
-- **Dependencies**: Waits for MongoDB to be healthy before starting
-- **Requirements**: Needs passwordFile to exist (generated by setup-generator)
-
-## Configuration Files
-
-- `mongod.conf`: MongoDB server configuration
-- `mongot.conf`: MongoDB Atlas Search configuration
-- `init-mongo.sh`: Initialization script for user creation and data loading
-
-## Service Architecture
-
-The Docker Compose configuration follows a clean two-phase approach:
-
-**Phase 1: Setup** (one-time, uses `--profile setup`):
-- `setup-generator`: Creates keyfile and passwordFile, then exits and removes container
-
-**Phase 2: Normal Operations** (ongoing use):
-- `mongod`: MongoDB service (assumes security files exist from Phase 1)
-- `mongot`: MongoDB Atlas Search service (depends on mongod health)
-
-This design separates concerns cleanly: setup is a one-time utility, while the main services run independently without complex dependencies.
-
-## Commands
-
-### First-Time Setup
-```bash
-# Step 1: Export passwords as environment variables (you can change these)
-export ADMIN_PASSWORD="admin"
-export MONGOT_PASSWORD="mongotPassword"
-export VOYAGE_API_KEY="" # If you are using auto-embedding feature
-
-# Step 2: Generate security files (uses passwords above)
- docker compose --profile setup run --rm setup-generator
-
-# Step 2: Start services
-docker compose up -d
 ```
-
-### Daily Operations
-```bash
-# Start services (assumes setup was done previously)
-docker compose up -d
-
-# View logs
-docker compose logs -f
-
-# Stop services
-docker compose down
-
-# Stop and remove volumes (WARNING: deletes data)
-docker compose down -v
-
-# Check service status
-docker compose ps
+├── docker/                  # Docker Compose deployment
+│   ├── docker-compose.yml   # Service definitions
+│   ├── mongod.conf          # MongoDB server configuration
+│   ├── mongot.conf          # MongoDB Search configuration
+│   ├── init-mongo.sh        # Initialization script
+│   ├── prometheus.yml       # Prometheus scrape configuration
+│   └── start-monitoring.sh  # Full stack startup with monitoring
+├── kubernetes/              # Kubernetes deployment
+│   ├── 00-namespace.yml     # Namespace definition
+│   ├── 01-secrets.yml       # Secrets for authentication
+│   ├── 02-mongodb-community.yml  # MongoDBCommunity CR
+│   ├── 03-mongot-deployment.yml  # MongoDBSearch CR
+│   ├── 04-monitoring.yml    # Prometheus, Grafana, exporter
+│   ├── kustomization.yaml   # Kustomize overlay
+│   ├── start-monitoring-k8s.sh   # Full K8s setup with monitoring
+│   ├── stop-monitoring-k8s.sh    # Cleanup port-forwards and resources
+│   └── load-sample-data-k8s.sh   # Sample data loader
+├── grafana/                 # Grafana provisioning
+│   └── provisioning/        # Dashboards and datasources
+├── scripts/                 # Shared helper scripts
+│   ├── generate-metrics.sh  # Generate test search activity
+│   ├── test-monitoring.sh   # Validate monitoring endpoints
+│   └── test-dashboard-metrics.sh  # Validate Grafana metrics
+└── sampledata.archive       # MongoDB sample datasets (downloaded)
 ```
-
-### Access MongoDB
-```bash
-# With default password
-docker compose exec mongod mongosh -u admin -p admin --authenticationDatabase admin
-
-# With custom password (replace with your actual password)
-docker compose exec mongod mongosh -u admin -p "your_admin_password" --authenticationDatabase admin
-```
-
-## Connecting to Services
-
-### MongoDB Connection
-```bash
-# With default passwords
-mongodb://admin:admin@localhost:27017/?authSource=admin
-
-# With custom passwords (replace with your actual passwords)
-mongodb://admin:[your_admin_password]@localhost:27017/?authSource=admin
-```
-
-### mongot Health Check
-```
-curl http://localhost:8080/health
-```
-
-### mongot Metrics
-```
-curl http://localhost:9946/metrics
-```
-
-## Troubleshooting
-
-### Check Service Health
-```bash
-docker compose ps
-docker compose logs mongod
-docker compose logs mongot
-
-# Check setup logs if you ran the setup recently
-docker compose logs setup-generator
-```
-
-### Keyfile Issues
-If you encounter keyfile permission issues:
-```bash
-# Regenerate keyfile and passwordFile (change passwords if necessary)
-docker volume rm mdb-community-search_auth-files
-export ADMIN_PASSWORD="admin"
-export MONGOT_PASSWORD="mongotPassword"
-docker compose --profile setup run --rm setup-generator
-```
-
-### Reset Everything
-```bash
-# Stop and remove auth files
-docker compose down -v
-docker volume rm mdb-community-search_auth-files
-
-# Start fresh with default passwords
-export ADMIN_PASSWORD="admin"
-export MONGOT_PASSWORD="mongotPassword"
-docker compose --profile setup run --rm setup-generator
-docker compose up -d
-```
-
-### Change Passwords
-To change passwords, stop services, regenerate the password file, and restart:
-```bash
-# Stop current services
-docker compose down
-
-# Remove auth files
-docker volume rm mdb-community-search_auth-files
-
-# Regenerate password file with new password
-export ADMIN_PASSWORD="newAdminPass" MONGOT_PASSWORD="newMongotPass" && docker compose --profile setup run --rm setup-generator
-
-# Restart services
-docker compose up -d
-```
-
-### Common Issues
-
-**Error: "no such file or directory" for keyfile or passwordFile**
-- This happens when running `docker compose up` before running the setup phase
-- Solution: Run setup first: `export ADMIN_PASSWORD="admin" MONGOT_PASSWORD="mongotPassword" && docker compose --profile setup run --rm setup-generator`
-
-**MongoDB authentication errors**
-- Ensure the passwordFile contains the correct mongot password
-- Regenerate if needed: `docker volume rm mdb-community-search_auth-files && export MONGOT_PASSWORD="yourPassword" && docker compose --profile setup run --rm setup-generator`
-
-## Network Configuration
-
-The services communicate through a custom bridge network called `search-community`. The hostnames used internally are:
-- `mongod.search-community` (MongoDB)
-- `mongot-community.search-community` (mongot)
-
-## Data Persistence
-Data is persisted in docker volumes:
-- prometheus_data
-- grafana_data
-- mongod_data
-- mongod_configdb
-- mongot_data
-
-Sample data is loaded from `sampledata.archive` if present
-
-All data directories are created automatically and persist between container restarts as long as the volumes are not deleted.
-
-# Prometheus Monitoring Setup
-
-This setup includes comprehensive monitoring with Prometheus and Grafana for both MongoDB Community Server and mongot metrics.
-
-## Quick Start with Monitoring
-
-```bash
-# Set passwords (optional - defaults to admin/admin/mongotPassword)
-export ADMIN_PASSWORD="your-admin-password"
-export MONGOT_PASSWORD="your-mongot-password"
-export GRAFANA_PASSWORD="your-grafana-password"
-
-# Start the full stack with monitoring
-./start-monitoring.sh
-```
-
-This provides:
-- **MongoDB Community Server**: Monitored via MongoDB Exporter  
-- **mongot (Atlas Search)**: Native Prometheus metrics endpoint
-- **Prometheus**: Time-series database for metrics collection
-- **Grafana**: Visualization and dashboarding with pre-built dashboard
 
 ## Access Points
 
 | Service | URL | Default Credentials |
 |---------|-----|-------------------|
-| MongoDB | `mongodb://admin:admin@localhost:27017` | admin/admin |
-| Prometheus Web UI | http://localhost:9090 | - |
-| Grafana Dashboards | http://localhost:3000 | admin/admin |
-| MongoDB Exporter Metrics | http://localhost:9216/metrics | - |
-| mongot Native Metrics | http://localhost:9946/metrics | - |
-| mongot Health Check | http://localhost:8080 | - |
+| MongoDB | `mongodb://admin:admin@localhost:27017` | admin / admin |
+| mongot Health | http://localhost:8080/health | — |
+| mongot Metrics | http://localhost:9946/metrics | — |
+| Prometheus | http://localhost:9090 | — |
+| Grafana | http://localhost:3000 | admin / admin |
+| MongoDB Exporter | http://localhost:9216/metrics | — |
 
-## Available Metrics
+## Helper Scripts
 
-### MongoDB Community Server Metrics (via exporter)
-- `mongodb_up` - Server availability (1=up, 0=down)
-- `mongodb_ss_connections` - Connection statistics (current, active, available)
-- `mongodb_ss_network_*` - Network I/O metrics (bytesIn, bytesOut)
-- `mongodb_ss_opcounters` - Operation counters (insert, query, update, delete)
-- `mongodb_ss_mem_*` - Memory usage (resident, virtual in MB)
-- `mongodb_ss_wt_*` - WiredTiger storage engine metrics
-- `mongodb_dbstats_*` - Database statistics (collections, dataSize, indexSize)
-
-### Mongot (Atlas Search) Metrics (native)
-- `mongot_command_searchBetaCommandTotalLatency_seconds` - Search command latency
-- `mongot_command_indexStatsCommandTotalLatency_seconds` - Index stats command latency
-- `mongot_command_*Failure_total` - Command failure counters
-- `mongot_*_executor_*` - Executor thread pool metrics
-
-## Testing the Setup
-
-```bash
-# Test all monitoring endpoints (run automatically on startup)
-./test-monitoring.sh
-
-# Test dashboard metrics availability (run automatically on startup) 
-./grafana/test-dashboard-metrics.sh
-
-# Run strict dashboard metric validation (expects real metric values)
-./grafana/test-dashboard-metrics.sh --strict
-
-# Generate sample activity to populate dashboard metrics
-./scripts/generate-metrics.sh compose
-```
-
-## Using Prometheus
-
-1. Open http://localhost:9090
-2. Use these example queries:
-   ```promql
-   # MongoDB connection count
-   mongodb_ss_connections{conn_type="current"}
-   
-   # Operations per second by type
-   rate(mongodb_ss_opcounters[5m])
-   
-   # Search command latency and rates
-   rate(mongot_command_searchBetaCommandTotalLatency_seconds_count[5m])
-   
-   # All mongot metrics
-   {__name__=~"mongot_.*"}
-   
-   # All MongoDB metrics
-   {__name__=~"mongodb_.*"}
-   ```
-
-## Using Grafana
-
-1. Open http://localhost:3000
-2. Login with admin/admin (or your GRAFANA_PASSWORD)
-3. The "MongoDB Community Search Monitoring" dashboard is automatically loaded with:
-   - **Service Status**: MongoDB & Mongot availability
-   - **Connection Metrics**: Current and active connections
-   - **Operations Rate**: Database operations per second by type
-   - **Memory Usage**: Resident and virtual memory consumption
-   - **Network I/O**: Bytes in/out rates
-   - **Search Metrics**: Search command latency, rates, and failures
-   - **Database Stats**: Collection counts and data sizes
-   - **WiredTiger Cache**: Cache usage and efficiency
-
-## Understanding Search Index Metrics
-
-Search index metrics in Grafana display MongoDB ObjectIds instead of human-readable names. To identify which index is which:
-
-```bash
-# Get search index mappings (using environment variables)
-docker exec -it mongod-community mongosh \
-  --username admin \
-  --password "${ADMIN_PASSWORD:-admin}" \
-  --authenticationDatabase admin \
-  --eval "
-db.adminCommand('listDatabases').databases.forEach(dbInfo => { 
-  if (dbInfo.name !== 'admin' && dbInfo.name !== 'config' && dbInfo.name !== 'local') { 
-    db = db.getSiblingDB(dbInfo.name); 
-    db.runCommand('listCollections').cursor.firstBatch.forEach(coll => { 
-      try { 
-        db.getCollection(coll.name).aggregate([{\\$listSearchIndexes: {}}]).forEach(idx => 
-          print(idx.id + ' = ' + dbInfo.name + '.' + coll.name + ' (' + idx.name + ' - ' + idx.type + ')')
-        ); 
-      } catch(e) {} 
-    }); 
-  } 
-});
-"
-```
-
-## Troubleshooting Monitoring
-
-### Check Service Health
-```bash
-docker compose ps
-docker compose logs mongod
-docker compose logs mongot
-docker compose logs mongodb-exporter
-docker compose logs prometheus
-docker compose logs grafana
-```
-
-### Verify Metrics Endpoints
-```bash
-# Test mongot metrics
-curl http://localhost:9946/metrics
-
-# Test MongoDB exporter metrics
-curl http://localhost:9216/metrics | grep mongodb_up
-
-# Test Prometheus targets
-curl http://localhost:9090/api/v1/targets
-```
-
-### Common Issues
-- **MongoDB Exporter fails**: Check MongoDB authentication and connectivity
-- **Mongot metrics unavailable**: Verify mongot service is healthy at http://localhost:8080
-- **Grafana dashboards empty**: Ensure Prometheus is successfully scraping both targets
-- **Docker network not found or already exists**: The docker compose file automatically looks for an external `search-community` network. If it doesn't exist create it with `docker network create search-community`
-
-### Stop ALL Services
-```bash
-# Stop all services
-docker compose down
-
-# Stop and remove all data (including Grafana dashboards)
-docker compose down -v
-
-# Remove the network (optional)
-docker network rm search-community
-```
+| Script | Description |
+|--------|-------------|
+| `docker/start-monitoring.sh` | Start Docker Compose stack with monitoring |
+| `kubernetes/start-monitoring-k8s.sh` | Deploy K8s resources, set up port-forwards, run tests |
+| `kubernetes/stop-monitoring-k8s.sh` | Stop port-forwards, optionally delete resources |
+| `kubernetes/load-sample-data-k8s.sh` | Load sample data into K8s MongoDB pod |
+| `scripts/generate-metrics.sh [compose\|k8s]` | Create search indexes and run queries for metrics |
+| `scripts/test-monitoring.sh` | Validate all monitoring endpoints |
+| `scripts/test-dashboard-metrics.sh` | Validate Grafana dashboard metric queries |

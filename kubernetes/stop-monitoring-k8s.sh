@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 NAMESPACE="${K8S_NAMESPACE:-mongodb}"
 DELETE_RESOURCES=false
 DELETE_NAMESPACE=false
@@ -9,13 +11,13 @@ YES=false
 
 usage() {
   cat <<EOF
-Usage: ./stop-monitoring-k8s.sh [options]
+Usage: ./kubernetes/stop-monitoring-k8s.sh [options]
 
 Stops common local kubectl port-forwards used by the Kubernetes monitoring helpers.
 Can also delete deployed resources.
 
 Options:
-  --delete-resources   Delete resources via 'kubectl delete -k .'
+  --delete-resources   Delete resources via 'kubectl delete -k kubernetes/'
   --delete-namespace   Delete configured namespace (default: mongodb)
   --yes, -y            Skip confirmation prompts
   --help, -h           Show this help
@@ -97,7 +99,7 @@ kill_matching_port_forwards
 if [[ "$DELETE_RESOURCES" == "true" ]]; then
   echo ""
   if confirm "Delete resources managed by kustomization in the current folder?"; then
-    kubectl delete -k . || true
+    kubectl delete -k "$SCRIPT_DIR" || true
     echo "🧹 Requested deletion of kustomize-managed resources."
   else
     echo "Skipped resource deletion."

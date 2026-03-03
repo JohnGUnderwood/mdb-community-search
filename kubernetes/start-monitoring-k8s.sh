@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 NAMESPACE="${K8S_NAMESPACE:-mongodb}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
 GRAFANA_PASSWORD="${GRAFANA_PASSWORD:-admin}"
@@ -186,14 +189,14 @@ require_command jq
 
 confirm_kube_context
 
-if [ ! -f "kustomization.yaml" ]; then
-  echo "❌ Run this script from the repository root (kustomization.yaml not found)."
+if [ ! -f "$SCRIPT_DIR/kustomization.yaml" ]; then
+  echo "❌ kustomization.yaml not found in $SCRIPT_DIR."
   exit 1
 fi
 
 echo ""
 echo "Applying Kubernetes manifests..."
-kubectl apply -k .
+kubectl apply -k "$SCRIPT_DIR"
 
 echo ""
 ensure_operator_ready
@@ -242,28 +245,28 @@ echo "  Grafana:            http://localhost:3000 (admin/${GRAFANA_PASSWORD})"
 
 # emoji for loading data
 echo "📦 Loading sample data into MongoDB..."
-  if [ -x "./scripts/load-sample-data-k8s.sh" ]; then
-    K8S_NAMESPACE="$NAMESPACE" ADMIN_PASSWORD="$ADMIN_PASSWORD" ./scripts/load-sample-data-k8s.sh
+  if [ -x "$SCRIPT_DIR/load-sample-data-k8s.sh" ]; then
+    K8S_NAMESPACE="$NAMESPACE" ADMIN_PASSWORD="$ADMIN_PASSWORD" "$SCRIPT_DIR/load-sample-data-k8s.sh"
   else
-    echo "⚠️  scripts/load-sample-data-k8s.sh not found or not executable"
-    echo "   Run 'chmod +x scripts/load-sample-data-k8s.sh'"
+    echo "⚠️  kubernetes/load-sample-data-k8s.sh not found or not executable"
+    echo "   Run 'chmod +x kubernetes/load-sample-data-k8s.sh'"
     exit 1
   fi
 
 echo ""
 echo "🧪 Running Kubernetes monitoring tests..."
-if [ -x "./test-monitoring.sh" ]; then
-  ./test-monitoring.sh
+if [ -x "$REPO_ROOT/scripts/test-monitoring.sh" ]; then
+  "$REPO_ROOT/scripts/test-monitoring.sh"
 else
-  echo "⚠️  test-monitoring.sh not found or not executable"
-  echo "   Run 'chmod +x test-monitoring.sh'"
+  echo "⚠️  scripts/test-monitoring.sh not found or not executable"
+  echo "   Run 'chmod +x scripts/test-monitoring.sh'"
 fi
 
 echo ""
 echo "🧪 Running dashboard metrics test (no-data mode)..."
-if [ -x "./scripts/test-dashboard-metrics.sh" ]; then
+if [ -x "$REPO_ROOT/scripts/test-dashboard-metrics.sh" ]; then
   (
-    cd scripts
+    cd "$REPO_ROOT/scripts"
     ./test-dashboard-metrics.sh
   )
 else
@@ -277,8 +280,7 @@ echo "  1. View metrics in Prometheus at http://localhost:9090"
 echo "  2. Open Grafana at http://localhost:3000"
 echo "  3. Inspect MongoDB exporter metrics at http://localhost:9216/metrics"
 if [[ "$KEEP_PORT_FORWARDS" == "true" ]]; then
-  echo "  4. Stop local port-forwards later with ./stop-monitoring-k8s.sh"
-fi
+  echo "  4. Stop local port-forwards later with ./kubernetes/stop-monitoring-k8s.sh"
 
 echo ""
 echo "🎯 Would you like to generate test metrics now?"
@@ -287,8 +289,8 @@ read -r -p "Generate test metrics? (y/N): " REPLY
 if [[ "$REPLY" =~ ^[Yy]$ ]]; then
   echo ""
   echo "🚀 Running local metric generation script..."
-  if [ -x "./scripts/generate-metrics.sh" ]; then
-    K8S_NAMESPACE="$NAMESPACE" ADMIN_PASSWORD="$ADMIN_PASSWORD" ./scripts/generate-metrics.sh k8s
+  if [ -x "$REPO_ROOT/scripts/generate-metrics.sh" ]; then
+    K8S_NAMESPACE="$NAMESPACE" ADMIN_PASSWORD="$ADMIN_PASSWORD" "$REPO_ROOT/scripts/generate-metrics.sh" k8s
   else
     echo "⚠️  scripts/generate-metrics.sh not found or not executable"
     echo "   Run 'chmod +x scripts/generate-metrics.sh'"
@@ -297,9 +299,9 @@ if [[ "$REPLY" =~ ^[Yy]$ ]]; then
 
   echo ""
   echo "🧪 Running strict dashboard metrics test after data generation..."
-  if [ -x "./scripts/test-dashboard-metrics.sh" ]; then
+  if [ -x "$REPO_ROOT/scripts/test-dashboard-metrics.sh" ]; then
     (
-      cd scripts
+      cd "$REPO_ROOT/scripts"
       ./test-dashboard-metrics.sh --strict
     )
   else

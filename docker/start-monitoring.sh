@@ -5,6 +5,12 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Run docker compose from the docker/ directory so compose file is found automatically
+cd "$SCRIPT_DIR"
+
 echo "Starting MongoDB Community Search with Prometheus monitoring..."
 
 # Check if network exists, create if not
@@ -26,12 +32,13 @@ echo "  Grafana Admin: [HIDDEN]"
 # Returns 0 (true) if Docker volume does not exist or exists but has no files
 is_volume_empty() {
     local volume_name="$1"
+    local full_volume="mdb-community-search_${volume_name}"
 
-    if ! docker volume inspect "$volume_name" >/dev/null 2>&1; then
+    if ! docker volume inspect "$full_volume" >/dev/null 2>&1; then
         return 0
     fi
 
-    if [ -z "$(docker run --rm -v "${volume_name}:/data" alpine sh -c 'ls -A /data 2>/dev/null')" ]; then
+    if [ -z "$(docker run --rm -v "${full_volume}:/data" alpine sh -c 'ls -A /data 2>/dev/null')" ]; then
         return 0
     fi
 
@@ -39,7 +46,7 @@ is_volume_empty() {
 }
 
 # Run setup first if auth-files volume is empty
-if is_volume_empty "mdb-community-search_auth-files"; then
+if is_volume_empty "auth-files"; then
     echo "Running initial setup..."
     docker compose run --rm setup-generator
     echo "Setup completed."
@@ -66,19 +73,19 @@ sleep 30
 echo ""
 echo "🧪 Running monitoring tests..."
 echo "=============================="
-if [ -x "./test-monitoring.sh" ]; then
-    ./test-monitoring.sh
+if [ -x "$REPO_ROOT/scripts/test-monitoring.sh" ]; then
+    "$REPO_ROOT/scripts/test-monitoring.sh"
 else
-    echo "⚠️  test-monitoring.sh not found or not executable"
-    echo "   Run 'chmod +x test-monitoring.sh' to make it executable"
+    echo "⚠️  scripts/test-monitoring.sh not found or not executable"
+    echo "   Run 'chmod +x scripts/test-monitoring.sh' to make it executable"
 fi
 
 # First, test dashboard query availability (no-data tolerant by default)
 echo "🧪 Running dashboard metrics test (no-data mode)..."
-if [ -x "./scripts/test-dashboard-metrics.sh" ]; then
-    cd scripts
+if [ -x "$REPO_ROOT/scripts/test-dashboard-metrics.sh" ]; then
+    cd "$REPO_ROOT/scripts"
     ./test-dashboard-metrics.sh
-    cd ..
+    cd "$REPO_ROOT"
 else
     echo "⚠️  scripts/test-dashboard-metrics.sh not found or not executable"
     echo "   Run 'chmod +x scripts/test-dashboard-metrics.sh' to make it executable"
@@ -112,15 +119,15 @@ echo ""
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo ""
     echo "🚀 Generating test metrics..."
-    if [ -x "./scripts/generate-metrics.sh" ]; then
-        ./scripts/generate-metrics.sh compose
+    if [ -x "$REPO_ROOT/scripts/generate-metrics.sh" ]; then
+        "$REPO_ROOT/scripts/generate-metrics.sh" compose
 
         echo ""
         echo "🧪 Running strict dashboard metrics test after data generation..."
-        if [ -x "./scripts/test-dashboard-metrics.sh" ]; then
-            cd scripts
+        if [ -x "$REPO_ROOT/scripts/test-dashboard-metrics.sh" ]; then
+            cd "$REPO_ROOT/scripts"
             ./test-dashboard-metrics.sh --strict
-            cd ..
+            cd "$REPO_ROOT"
         else
             echo "⚠️  scripts/test-dashboard-metrics.sh not found or not executable"
             echo "   Run 'chmod +x scripts/test-dashboard-metrics.sh' to make it executable"

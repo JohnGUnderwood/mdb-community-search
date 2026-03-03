@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
 K8S_NAMESPACE="${K8S_NAMESPACE:-mongodb}"
 K8S_MONGOD_POD="${K8S_MONGOD_POD:-mongodb-0}"
@@ -65,9 +68,9 @@ else
     echo "Sample data missing (or empty). Running full-archive mongorestore..."
   fi
 
-  if [ -f "sampledata.archive" ]; then
+  if [ -f "$REPO_ROOT/sampledata.archive" ]; then
     echo "Copying sampledata.archive to pod ${K8S_MONGOD_POD}:${POD_ARCHIVE_PATH}..."
-    copy_archive_to_pod
+    kubectl cp "$REPO_ROOT/sampledata.archive" "${K8S_NAMESPACE}/${K8S_MONGOD_POD}:${POD_ARCHIVE_PATH}" -c "${K8S_MONGOD_CONTAINER}"
 
     cleanup_needed=true
     trap 'if [ "${cleanup_needed:-false}" = "true" ]; then cleanup_archive_in_pod; fi' EXIT
@@ -94,6 +97,6 @@ else
 
     echo "Sample data restored successfully. Document count: ${DOC_COUNT}"
   else
-    echo "Warning: sampledata.archive not found at sampledata.archive"
+    echo "Warning: sampledata.archive not found at $REPO_ROOT/sampledata.archive"
   fi
 fi

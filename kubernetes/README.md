@@ -33,13 +33,13 @@ helm install mongodb-kubernetes mongodb/mongodb-kubernetes \
 ### Automated Helper Scripts (closest to Docker Compose flow)
 
 ```bash
-chmod +x start-monitoring-k8s.sh test-monitoring.sh stop-monitoring-k8s.sh
+chmod +x start-monitoring-k8s.sh stop-monitoring-k8s.sh load-sample-data-k8s.sh ../scripts/test-monitoring.sh
 
 # Apply manifests, wait for core resources, and run monitoring checks
 ./start-monitoring-k8s.sh
 
 # Run shared monitoring checks (start-monitoring-k8s.sh handles port-forwards)
-./test-monitoring.sh
+../scripts/test-monitoring.sh
 
 # Stop local monitoring port-forwards
 ./stop-monitoring-k8s.sh
@@ -56,7 +56,7 @@ Environment overrides:
 
 Port-forward note:
 - `./start-monitoring-k8s.sh` opens local port-forwards for Search health (`8080`), Search metrics (`9946`), MongoDB exporter (`9216`), Prometheus (`9090`), and Grafana (`3000`).
-- These forwards stay running after setup so `./test-monitoring.sh` can be run separately.
+- These forwards stay running after setup so `../scripts/test-monitoring.sh` can be run separately.
 - Stop them with `./stop-monitoring-k8s.sh`.
 - To make startup behave as one-shot cleanup on exit, run with `KEEP_PORT_FORWARDS=false ./start-monitoring-k8s.sh`.
 
@@ -81,7 +81,7 @@ kubectl wait -n mongodb \
 kubectl get mdbc,mdbs,pods -n mongodb
 
 # Generate metrics in k8s mode (runs mongosh in-pod)
-K8S_NAMESPACE=mongodb ./scripts/generate-metrics.sh k8s
+K8S_NAMESPACE=mongodb ../scripts/generate-metrics.sh k8s
 ```
 
 ### Option 2: With Custom Passwords
@@ -124,45 +124,31 @@ kubectl exec -i -n mongodb mongodb-0 -c mongod -- \
 
 ## Optional: Restore Sample Data
 
-To load full MongoDB sample datasets, use the restore Job below:
+To load full MongoDB sample datasets, use the helper script below. It copies the archive into the pod via `kubectl cp` and runs `mongorestore` in-pod.
 
 ### Using sampledata.archive
 
-1. Download the archive (one-time, ~50MB) to the repository root:
+1. Download the archive (one-time, ~50 MB) to the repository root:
 ```bash
-cd /Users/junderwood/GitHub/mdb-community-search
-curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o sampledata.archive
+curl https://atlas-education.s3.amazonaws.com/sampledata.archive -o ../sampledata.archive
 ```
 
-2. Update `kubernetes/05-restore-sample-data-job.yml` to bind-mount the archive from your repository root.
-
-Find the `volumes` section (at the bottom) and replace `emptyDir: {}` with:
-```yaml
-volumes:
-  - name: sample-archive
-    hostPath:
-      path: /Users/junderwood/GitHub/mdb-community-search
-      type: Directory
-```
-(Replace the path with your actual repository root directory)
-
-3. Run the restore Job:
+2. Run the restore script:
 ```bash
-kubectl apply -f kubernetes/05-restore-sample-data-job.yml
-kubectl logs -n mongodb job/mongodb-restore-sample-data -f
+K8S_NAMESPACE=mongodb ./load-sample-data-k8s.sh
 ```
 
-The Job will:
-- Look for `sampledata.archive` in the mounted `/mnt/sample-data` directory
-- Skip gracefully if the archive is not found (not an error—metrics Job data already works)
+The script will:
+- Copy `sampledata.archive` from the repository root into the `mongod` pod
 - Check if sample data already exists and skip restore if present
-- Restore all sample databases when the archive is available
+- Run `mongorestore` inside the pod and clean up the archive afterwards
+- Skip gracefully if the archive file is not found locally
 
-To re-run after deletion:
-```bash
-kubectl delete job -n mongodb mongodb-restore-sample-data
-kubectl apply -f kubernetes/05-restore-sample-data-job.yml
-```
+Environment overrides:
+- `K8S_NAMESPACE` (default: `mongodb`)
+- `ADMIN_PASSWORD` (default: `admin`)
+- `K8S_MONGOD_POD` (default: `mongodb-0`)
+- `RESTORE_NS_INCLUDE` — limit restore to a specific namespace pattern (e.g. `sample_mflix.*`)
 
 ## Access Services
 
@@ -176,7 +162,7 @@ For helper scripts in `k8s` mode, MongoDB port-forward is not required because t
 
 Load sample data with the Kubernetes helper script:
 ```bash
-K8S_NAMESPACE=mongodb ./scripts/load-sample-data-k8s.sh
+K8S_NAMESPACE=mongodb ./load-sample-data-k8s.sh
 ```
 
 ### Prometheus
@@ -207,7 +193,7 @@ To restore the complete MongoDB sample datasets (sample_airbnb, sample_mflix, et
 Run metrics generation using the shared script with the `k8s` runtime argument.
 
 ```bash
-K8S_NAMESPACE=mongodb ./scripts/generate-metrics.sh k8s
+K8S_NAMESPACE=mongodb ../scripts/generate-metrics.sh k8s
 ```
 
 ## Cleanup

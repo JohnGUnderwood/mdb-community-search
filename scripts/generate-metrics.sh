@@ -7,6 +7,9 @@
 ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
 RUNTIME=${1:-compose}
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 if [ "${RUNTIME}" != "compose" ] && [ "${RUNTIME}" != "k8s" ]; then
   echo "Usage: $0 [compose|k8s]"
   exit 1
@@ -25,7 +28,7 @@ run_mongosh_k8s() {
 
 run_mongosh_admin() {
   if [ "${RUNTIME}" = "compose" ]; then
-    docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin "$@"
+    docker compose --project-directory "$REPO_ROOT/docker" exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin "$@"
   else
     run_mongosh_k8s -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin "$@"
   fi
@@ -33,7 +36,7 @@ run_mongosh_admin() {
 
 run_mongosh_sample() {
   if [ "${RUNTIME}" = "compose" ]; then
-    docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix "$@"
+    docker compose --project-directory "$REPO_ROOT/docker" exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix "$@"
   else
     run_mongosh_k8s -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix "$@"
   fi
@@ -95,7 +98,7 @@ echo "=================================================="
 # Check if MongoDB is accessible
 if ! run_mongosh_admin --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
   if [ "${RUNTIME}" = "compose" ]; then
-    echo "❌ MongoDB is not accessible. Make sure the stack is running with: docker compose up -d"
+    echo "❌ MongoDB is not accessible. Make sure the stack is running with: cd docker && docker compose up -d"
   else
     echo "❌ MongoDB is not accessible via kubectl exec"
     echo "   Namespace: ${K8S_NAMESPACE}, Pod: ${K8S_MONGOD_POD}, Container: ${K8S_MONGOD_CONTAINER}"
