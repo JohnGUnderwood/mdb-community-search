@@ -1,3 +1,7 @@
+# TODO
+Automate the setup as described here: https://www.mongodb.com/docs/kubernetes/current/tutorial/install-fts-vs-with-community/
+To included security setup and update the config files, also add auto-embedding option.
+
 # Kubernetes Deployment - Quick Start
 
 ## Prerequisites
