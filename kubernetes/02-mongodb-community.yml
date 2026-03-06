@@ -1,0 +1,57 @@
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: mongodb
+  namespace: mongodb
+spec:
+  members: 1
+  type: ReplicaSet
+  version: "8.2.0"
+
+  security:
+    authentication:
+      ignoreUnknownUsers: true
+      modes:
+        - SCRAM
+    tls:
+      enabled: false
+
+  users:
+    - name: admin
+      db: admin
+      passwordSecretRef:
+        name: admin-user-password
+      scramCredentialsSecretName: admin-user
+      roles:
+        - name: root
+          db: admin
+    - name: mdb-user
+      db: admin
+      passwordSecretRef:
+        name: mdb-user-password
+      scramCredentialsSecretName: mdb-user-scram
+      roles:
+        - name: readWrite
+          db: admin
+    - name: search-sync-source
+      db: admin
+      passwordSecretRef:
+        name: mongodb-search-sync-source-password
+      scramCredentialsSecretName: mongodb-search-sync-source
+      roles:
+        - name: searchCoordinator
+          db: admin
+
+  statefulSet:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mongod
+              resources:
+                requests:
+                  memory: "1Gi"
+                  cpu: "1"
+                limits:
+                  memory: "2Gi"
+                  cpu: "2"

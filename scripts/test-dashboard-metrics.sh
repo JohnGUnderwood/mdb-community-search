@@ -156,7 +156,8 @@ test_metric_smart() {
 
 # Read the dashboard file and extract unique Prometheus queries
 echo "📋 Extracting queries from dashboard..."
-dashboard_file="./provisioning/dashboards/mongodb-dashboard.json"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+dashboard_file="$SCRIPT_DIR/../grafana/provisioning/dashboards/mongodb-dashboard.json"
 
 # Extract all expr queries from the dashboard more carefully
 temp_file=$(mktemp)
@@ -214,7 +215,7 @@ else
     echo "   1. Ensure MongoDB and Mongot services are running"
     echo "   2. Check that Prometheus is scraping metrics successfully"
     echo "   3. Verify MongoDB exporter is configured correctly"
-    echo "   4. Run ./test-monitoring.sh to check basic connectivity"
+    echo "   4. Run ./scripts/test-monitoring.sh to check basic connectivity"
     echo "   5. If there is no traffic yet, run with --allow-no-data"
     echo "   6. For strict checks after generating data, run with --strict"
     echo ""

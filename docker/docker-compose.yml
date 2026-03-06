@@ -1,3 +1,5 @@
+name: mdb-community-search
+
 services:
   # Service to generate keyfile and password file if they don't exist
   setup-generator:
@@ -75,7 +77,7 @@ services:
       - mongod_configdb:/data/configdb
       - ./mongod.conf:/etc/mongod.conf:ro
       - auth-files:/auth
-      - ./sampledata.archive:/sampledata.archive:ro
+      - ../sampledata.archive:/sampledata.archive:ro
       - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
     networks:
       - search-community
@@ -170,7 +172,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../grafana/provisioning:/etc/grafana/provisioning:ro
     networks:
       - search-community
     depends_on:

@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: mongodb
+
+resources:
+  - 00-namespace.yml
+  - 01-secrets.yml
+  - 02-mongodb-community.yml
+  - 03-mongot-deployment.yml
+  - 04-monitoring.yml
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+  - name: grafana-datasources
+    files:
+      - ../grafana/provisioning/datasources/prometheus.yml
+  - name: grafana-dashboards
+    files:
+      - ../grafana/provisioning/dashboards/dashboards.yml
+      - ../grafana/provisioning/dashboards/mongodb-dashboard.json
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app: mongodb-community-search
+      managed-by: kustomize

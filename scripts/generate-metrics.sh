@@ -5,13 +5,104 @@
 
 # Set default passwords from environment variables
 ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
+RUNTIME=${1:-compose}
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+if [ "${RUNTIME}" != "compose" ] && [ "${RUNTIME}" != "k8s" ]; then
+  echo "Usage: $0 [compose|k8s]"
+  exit 1
+fi
+
+if [ "${RUNTIME}" = "k8s" ]; then
+  K8S_NAMESPACE=${K8S_NAMESPACE:-mongodb}
+  K8S_MONGOD_POD=${K8S_MONGOD_POD:-mongodb-0}
+  K8S_MONGOD_CONTAINER=${K8S_MONGOD_CONTAINER:-mongod}
+  K8S_MONGOSH_HOME=${K8S_MONGOSH_HOME:-/tmp}
+fi
+
+run_mongosh_k8s() {
+  kubectl exec -i -n "${K8S_NAMESPACE}" "${K8S_MONGOD_POD}" -c "${K8S_MONGOD_CONTAINER}" -- env HOME="${K8S_MONGOSH_HOME}" XDG_CONFIG_HOME="${K8S_MONGOSH_HOME}" MONGOSH_CONFIG_DIR="${K8S_MONGOSH_HOME}/.mongodb" mongosh --norc "$@"
+}
+
+run_mongosh_admin() {
+  if [ "${RUNTIME}" = "compose" ]; then
+    docker compose --project-directory "$REPO_ROOT/docker" exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin "$@"
+  else
+    run_mongosh_k8s -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin "$@"
+  fi
+}
+
+run_mongosh_sample() {
+  if [ "${RUNTIME}" = "compose" ]; then
+    docker compose --project-directory "$REPO_ROOT/docker" exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix "$@"
+  else
+    run_mongosh_k8s -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix "$@"
+  fi
+}
+
+wait_for_search_index_queryable() {
+  local db_name=$1
+  local collection_name=$2
+  local index_name=$3
+  local max_attempts=${4:-90}
+  local sleep_seconds=${5:-2}
+
+  echo "⏳ Waiting for search index ${db_name}.${collection_name}.${index_name} to become queryable..."
+
+  for ((attempt=1; attempt<=max_attempts; attempt++)); do
+    status=$(run_mongosh_admin --quiet --eval "
+    try {
+      const dbi = db.getSiblingDB('${db_name}');
+      const res = dbi.getCollection('${collection_name}').aggregate([
+        { \$listSearchIndexes: { name: '${index_name}' } }
+      ]).toArray();
+
+      if (!res || res.length === 0) {
+        print('MISSING');
+      } else {
+        const idx = res[0];
+        if (idx.status === 'READY') {
+          print('READY');
+        } else {
+          print(idx.status || 'WAITING');
+        }
+      }
+    } catch (e) {
+      print('ERROR');
+    }
+    " 2>/dev/null | tail -n 1 | tr -d '\r')
+
+    if [ "${status}" = "READY" ]; then
+      echo "✅ Search index ${index_name} is queryable"
+      return 0
+    fi
+
+    if [ "${attempt}" -eq 1 ] || [ $((attempt % 10)) -eq 0 ]; then
+      echo "   ...still waiting for ${index_name} (status: ${status:-unknown}, attempt ${attempt}/${max_attempts})"
+    fi
+
+    if [ "${attempt}" -eq "${max_attempts}" ]; then
+      echo "⚠️  Timed out waiting for ${index_name}. Last status: ${status:-unknown}. Continuing..."
+      return 1
+    fi
+
+    sleep "${sleep_seconds}"
+  done
+}
 
 echo "🔍 Generating Search Activity for Dashboard Demo..."
 echo "=================================================="
 
 # Check if MongoDB is accessible
-if ! docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
-  echo "❌ MongoDB is not accessible. Make sure the stack is running with: docker compose up -d"
+if ! run_mongosh_admin --eval "db.adminCommand('ping')" >/dev/null 2>&1; then
+  if [ "${RUNTIME}" = "compose" ]; then
+    echo "❌ MongoDB is not accessible. Make sure the stack is running with: cd docker && docker compose up -d"
+  else
+    echo "❌ MongoDB is not accessible via kubectl exec"
+    echo "   Namespace: ${K8S_NAMESPACE}, Pod: ${K8S_MONGOD_POD}, Container: ${K8S_MONGOD_CONTAINER}"
+  fi
   exit 1
 fi
 
@@ -19,7 +110,11 @@ echo "✅ MongoDB is accessible"
 
 # Check if we have sample data
 echo -n "Checking for sample data... "
-DB_COUNT=$(docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "print(db.adminCommand('listDatabases').databases.filter(d => d.name.startsWith('sample')).length)" --quiet)
+DB_COUNT_RAW=$(run_mongosh_admin --eval "print(db.adminCommand('listDatabases').databases.filter(d => d.name.startsWith('sample')).length)" --quiet)
+DB_COUNT=$(printf '%s\n' "${DB_COUNT_RAW}" | tr -dc '0-9')
+if [ -z "${DB_COUNT}" ]; then
+  DB_COUNT=0
+fi
 if [ "$DB_COUNT" -gt 0 ]; then
   echo "✅ Found $DB_COUNT sample database(s)"
 else
@@ -29,7 +124,7 @@ fi
 # Create search indexes on the sample databases if they exist
 echo ""
 echo "📊 Creating search indexes..."
-docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+run_mongosh_admin --eval "
 try {
   const dbs = db.adminCommand('listDatabases').databases.map(d => d.name);
   
@@ -117,6 +212,13 @@ try {
   print('Error: ' + e);
 }" --quiet
 
+# TODO: Re-enable this readiness check when MongoDB Community consistently
+# returns index status/queryable fields for $listSearchIndexes.
+# if run_mongosh_admin --quiet --eval "print(db.adminCommand('listDatabases').databases.some(d => d.name === 'sample_mflix') ? '1' : '0')" | grep -q "1"; then
+#   wait_for_search_index_queryable "sample_mflix" "embedded_movies" "text_index"
+#   wait_for_search_index_queryable "sample_mflix" "embedded_movies" "vector_index"
+# fi
+
 echo ""
 echo "🔍 Running search queries to generate metrics..."
 
@@ -146,7 +248,7 @@ for i in "${!QUERIES[@]}"; do
   IFS=':' read -r query limit <<< "${QUERIES[$i]}"
   echo "Running search query $((i+1))/${#QUERIES[@]}: '$query' with limit $limit..."
   
-  docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+  run_mongosh_admin --eval "
   try {
     db = db.getSiblingDB('sample_mflix');
     if (db.embedded_movies.countDocuments() > 0) {
@@ -205,7 +307,7 @@ for query_config in "${MOVIE_QUERIES[@]}"; do
   IFS=':' read -r query limit <<< "$query_config"
   echo "Running movie search: '$query' with limit $limit..."
   
-  docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+  run_mongosh_admin --eval "
   try {
     db = db.getSiblingDB('sample_mflix');
     if (db.embedded_movies.countDocuments() > 0) {
@@ -254,7 +356,7 @@ AUTOCOMPLETE_QUERIES=("star" "the" "love" "war" "dark" "super")
 for query in "${AUTOCOMPLETE_QUERIES[@]}"; do
   echo "Running autocomplete search for: '$query'..."
   
-  docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+  run_mongosh_admin --eval "
   try {
     db = db.getSiblingDB('sample_mflix');
     if (db.embedded_movies.countDocuments() > 0) {
@@ -296,7 +398,7 @@ echo "🔍 Running additional search variations to generate more metric data..."
 for i in {1..3}; do
   echo "Running complex search query $i/3..."
   
-  docker compose exec -T mongod mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin --eval "
+  run_mongosh_admin --eval "
   try {
     db = db.getSiblingDB('sample_mflix');
     if (db.embedded_movies.countDocuments() > 0) {
@@ -361,7 +463,7 @@ echo ""
 echo "� Running \$search.vectorSearch queries to populate candidates and limit metrics..."
 
 # Run vector search queries with different limits and parameters in a single session
-docker exec mongod-community mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix --eval "
+run_mongosh_sample --eval "
 // Get a few random movie plot embeddings for vector search queries
 print('Getting sample embeddings for vector search...');
 const sampleMovies = db.embedded_movies.aggregate([
@@ -425,7 +527,7 @@ echo ""
 echo "🔬 Running equivalent \$vectorSearch queries with different limits..."
 
 # Run $vectorSearch queries with different limits and parameters in a single session
-docker exec mongod-community mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix --eval "
+run_mongosh_sample --eval "
 // Get a few random movie plot embeddings for vector search queries
 print('Getting sample embeddings for \$vectorSearch...');
 const sampleMovies = db.embedded_movies.aggregate([
@@ -487,7 +589,7 @@ echo ""
 echo "🎯 Running additional \$vectorSearch variations with higher k values..."
 
 # Run some vectorSearch queries with much higher k values to really populate the metrics
-docker exec mongod-community mongosh -u admin -p "${ADMIN_PASSWORD}" --authenticationDatabase admin sample_mflix --eval "
+run_mongosh_sample --eval "
 // Get a sample movie embedding for high-candidate vector searches
 const sampleMovie = db.embedded_movies.findOne({plot_embedding_voyage_3_large: {\$exists: true}});
 
