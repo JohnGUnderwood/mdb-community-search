@@ -15,11 +15,11 @@ generatorOptions:
 configMapGenerator:
   - name: grafana-datasources
     files:
-      - ../grafana/provisioning/datasources/prometheus.yml
+      - grafana-configs/datasources/prometheus.yml
   - name: grafana-dashboards
     files:
-      - ../grafana/provisioning/dashboards/dashboards.yml
-      - ../grafana/provisioning/dashboards/mongodb-dashboard.json
+      - grafana-configs/dashboards/dashboards.yml
+      - grafana-configs/dashboards/mongodb-dashboard.json
 
 labels:
   - includeSelectors: false

@@ -66,3 +66,5 @@ metrics_report_*.json
 *.tmp
 *.temp
 *_pid
+
+kubernetes/grafana-configs/

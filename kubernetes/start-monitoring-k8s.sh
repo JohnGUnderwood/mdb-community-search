@@ -13,6 +13,30 @@ KEEP_PORT_FORWARDS="${KEEP_PORT_FORWARDS:-true}"
 
 PORT_FORWARD_PIDS=()
 
+copy_grafana_configs () {
+  # Sync Grafana configurations from the shared location to kubernetes directory
+  # This ensures a single source of truth while maintaining Kustomize compatibility
+
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  GRAFANA_SOURCE_DIR="$SCRIPT_DIR/../grafana/provisioning"
+  GRAFANA_TARGET_DIR="$SCRIPT_DIR/grafana-configs"
+
+  echo "Syncing Grafana configurations..."
+
+  # Create target directory if it doesn't exist
+  mkdir -p "$GRAFANA_TARGET_DIR/datasources"
+  mkdir -p "$GRAFANA_TARGET_DIR/dashboards"
+
+  # Copy datasources
+  cp "$GRAFANA_SOURCE_DIR/datasources/prometheus.yml" "$GRAFANA_TARGET_DIR/datasources/"
+
+  # Copy dashboards
+  cp "$GRAFANA_SOURCE_DIR/dashboards/dashboards.yml" "$GRAFANA_TARGET_DIR/dashboards/"
+  cp "$GRAFANA_SOURCE_DIR/dashboards/mongodb-dashboard.json" "$GRAFANA_TARGET_DIR/dashboards/"
+
+  echo "✓ Grafana configurations synced successfully"
+}
+
 cleanup() {
   if [ "${#PORT_FORWARD_PIDS[@]}" -gt 0 ]; then
     echo ""
@@ -194,6 +218,8 @@ if [ ! -f "$SCRIPT_DIR/kustomization.yaml" ]; then
   exit 1
 fi
 
+copy_grafana_configs
+
 echo ""
 echo "Applying Kubernetes manifests..."
 kubectl apply -k "$SCRIPT_DIR"
@@ -281,6 +307,7 @@ echo "  2. Open Grafana at http://localhost:3000"
 echo "  3. Inspect MongoDB exporter metrics at http://localhost:9216/metrics"
 if [[ "$KEEP_PORT_FORWARDS" == "true" ]]; then
   echo "  4. Stop local port-forwards later with ./kubernetes/stop-monitoring-k8s.sh"
+fi
 
 echo ""
 echo "🎯 Would you like to generate test metrics now?"
