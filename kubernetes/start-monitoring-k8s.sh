@@ -248,6 +248,13 @@ ensure_endpoint "http://localhost:9216/metrics" "MongoDB Exporter Metrics" "svc/
 ensure_endpoint "http://localhost:9090" "Prometheus" "svc/prometheus" 9090 9090
 ensure_endpoint "http://localhost:3000" "Grafana" "svc/grafana" 3000 3000
 
+echo "ℹ️  Starting port-forward for MongoDB (svc/mongodb-svc 27017:27017)..."
+kubectl port-forward -n "$NAMESPACE" svc/mongodb-svc 27017:27017 >/dev/null 2>&1 &
+mongodb_pf_pid=$!
+PORT_FORWARD_PIDS+=("$mongodb_pf_pid")
+sleep 2
+echo "✅ MongoDB available at localhost:27017"
+
 echo ""
 echo "Waiting for Prometheus scrape targets to report UP..."
 if ! wait_for_prometheus_job_up "mongot" 120; then
@@ -262,6 +269,7 @@ echo "✅ Prometheus scrape targets are UP"
 
 echo ""
 echo "Services available at:"
+echo "  MongoDB:            mdb://localhost:27017 (admin/${ADMIN_PASSWORD})"
 echo "  MongoDB Search:     http://localhost:8080/health"
 echo "  MongoDB Search Met: http://localhost:9946/metrics"
 echo "  MongoDB Metrics:    http://localhost:9216/metrics"
