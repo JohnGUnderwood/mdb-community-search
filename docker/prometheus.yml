@@ -3,14 +3,30 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  # MongoDB Search (mongot) metrics - native Prometheus endpoint
-  - job_name: 'mongot'
+  # MongoDB Search (mongot) instance 1 metrics
+  - job_name: 'mongot-1'
     static_configs:
-      - targets: ['mongot:9946']
+      - targets: ['mongot-1:9946']
     scrape_interval: 10s
     metrics_path: /metrics
     scrape_protocols: ['PrometheusProto', 'PrometheusText0.0.4', 'OpenMetricsText1.0.0', 'OpenMetricsText0.0.1']
     fallback_scrape_protocol: 'PrometheusText0.0.4'
+
+  # MongoDB Search (mongot) instance 2 metrics
+  - job_name: 'mongot-2'
+    static_configs:
+      - targets: ['mongot-2:9946']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    scrape_protocols: ['PrometheusProto', 'PrometheusText0.0.4', 'OpenMetricsText1.0.0', 'OpenMetricsText0.0.1']
+    fallback_scrape_protocol: 'PrometheusText0.0.4'
+
+  # Envoy load balancer metrics
+  - job_name: 'envoy'
+    static_configs:
+      - targets: ['envoy:9901']
+    scrape_interval: 15s
+    metrics_path: /stats/prometheus
 
   # MongoDB Community Server metrics via exporter
   - job_name: 'mongodb-exporter'

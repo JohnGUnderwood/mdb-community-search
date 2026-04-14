@@ -11,7 +11,7 @@ services:
       - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       # Optional: Voyage API Key for auto-embedding features
-      # - VOYAGE_API_KEY=${VOYAGE_API_KEY}
+      - VOYAGE_API_KEY=${VOYAGE_API_KEY}
     command: >
       sh -c "
         echo 'Setting up security files...';
@@ -88,15 +88,34 @@ services:
       retries: 5
       start_period: 30s
 
-  mongot:
-    image: mongodb/mongodb-community-search:latest
-    container_name: mongot-community
+  # Envoy load balancer for multiple mongot instances
+  # Mirrors the managed Envoy setup used by MongoDB Kubernetes Operator
+  envoy:
+    image: envoyproxy/envoy:v1.29-latest
+    container_name: envoy-lb
     ports:
-      - "27028:27028"  # gRPC server port
-      - "8080:8080"    # Health check port  
+      - "27028:27028"  # gRPC server port (load balanced)
+      - "9901:9901"    # Admin interface
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml:ro
+    networks:
+      - search-community
+    depends_on:
+      mongot-1:
+        condition: service_healthy
+      mongot-2:
+        condition: service_healthy
+    command: ["-c", "/etc/envoy/envoy.yaml"]
+    restart: unless-stopped
+
+  # MongoDB Search (mongot) instance 1
+  mongot-1:
+    image: mongodb/mongodb-community-search:latest
+    container_name: mongot-1
+    ports:
       - "9946:9946"    # Metrics port
     volumes:
-      - mongot_data:/data/mongot
+      - mongot_data_1:/data/mongot
       - ./mongot.conf:/mongot-community/config.default.yml:ro
       - auth-files:/auth
     networks:
@@ -105,7 +124,29 @@ services:
       mongod:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://mongot:9946/metrics"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://mongot-1:9946/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # MongoDB Search (mongot) instance 2
+  mongot-2:
+    image: mongodb/mongodb-community-search:latest
+    container_name: mongot-2
+    ports:
+      - "9947:9946"    # Metrics port (mapped to different host port)
+    volumes:
+      - mongot_data_2:/data/mongot
+      - ./mongot.conf:/mongot-community/config.default.yml:ro
+      - auth-files:/auth
+    networks:
+      - search-community
+    depends_on:
+      mongod:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://mongot-2:9946/metrics"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -157,8 +198,8 @@ services:
     depends_on:
       mongod:
         condition: service_healthy
-      mongot:
-        condition: service_healthy
+      envoy:
+        condition: service_started
     restart: unless-stopped
 
   # Grafana for visualization (optional)
@@ -184,7 +225,8 @@ volumes:
   grafana_data:
   mongod_data:
   mongod_configdb:
-  mongot_data:
+  mongot_data_1:
+  mongot_data_2:
   auth-files:
 
 networks:
