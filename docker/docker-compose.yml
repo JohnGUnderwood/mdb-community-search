@@ -11,7 +11,7 @@ services:
       - MONGOT_PASSWORD=${MONGOT_PASSWORD:-mongotPassword}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin}
       # Optional: Voyage API Key for auto-embedding features
-      # - VOYAGE_API_KEY=${VOYAGE_API_KEY}
+      - VOYAGE_API_KEY=${VOYAGE_API_KEY}
     command: >
       sh -c "
         echo 'Setting up security files...';
@@ -24,7 +24,7 @@ services:
           apk add --no-cache openssl;
           openssl rand -base64 756 > /auth/keyfile;
           chmod 400 /auth/keyfile;
-          chown 101:101 /auth/keyfile;
+          chown 1000:1000 /auth/keyfile;
           echo 'Keyfile generated successfully';
         else
           echo 'Keyfile already exists, skipping generation';
@@ -35,7 +35,7 @@ services:
           echo 'Creating password file...';
           echo -n \"$$MONGOT_PASSWORD\" > /auth/passwordFile;
           chmod 600 /auth/passwordFile;
-          chown 101:101 /auth/passwordFile;
+          chown 1000:1000 /auth/passwordFile;
           echo 'Password file created successfully';
         else
           echo 'Password file already exists, skipping creation';
@@ -47,7 +47,7 @@ services:
           echo -n \"$$VOYAGE_API_KEY\" > /auth/voyage-api-query-key;
           echo -n \"$$VOYAGE_API_KEY\" > /auth/voyage-api-indexing-key;
           chmod 600 /auth/voyage-api-query-key /auth/voyage-api-indexing-key;
-          chown 101:101 /auth/voyage-api-query-key /auth/voyage-api-indexing-key;
+          chown 1000:1000 /auth/voyage-api-query-key /auth/voyage-api-indexing-key;
           echo 'Voyage API key files created successfully';
         else
           echo 'No VOYAGE_API_KEY provided, skipping Voyage API key file creation';
