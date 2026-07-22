@@ -59,7 +59,7 @@ services:
       - setup
 
   mongod:
-    image: mongodb/mongodb-community-server:latest
+    image: mongodb/mongodb-community-server:8.3.4-ubi9
     container_name: mongod-community
     environment:
       MONGODB_INITDB_ROOT_USERNAME: admin
@@ -87,9 +87,12 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    mem_limit: 6g
+    mem_reservation: 6g
+    cpus: 2
 
   mongot:
-    image: mongodb/mongodb-community-search:latest
+    image: mongodb/mongodb-community-search:1.70.1
     container_name: mongot-community
     ports:
       - "27028:27028"  # gRPC server port
