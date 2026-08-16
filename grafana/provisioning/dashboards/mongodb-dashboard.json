@@ -10,7 +10,22 @@
     "performance"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "DS_PROMETHEUS",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
     "from": "now-15m",
@@ -44,7 +59,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -114,7 +129,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongodb_up",
           "legendFormat": "MongoDB",
@@ -123,7 +138,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "up{job=\"mongot\"}",
           "legendFormat": "Mongot",
@@ -135,7 +150,7 @@
     },
     {
       "datasource": {
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -199,7 +214,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -284,7 +299,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_command_searchCommandTotalLatency_seconds{quantile=\"0.5\"}",
           "legendFormat": "Text Search p50",
@@ -293,7 +308,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_command_searchCommandTotalLatency_seconds{quantile=\"0.99\"}",
           "legendFormat": "Text Search p99",
@@ -306,7 +321,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -391,7 +406,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_command_vectorSearchCommandTotalLatency_seconds{quantile=\"0.5\"}",
           "legendFormat": "Vector Search p50",
@@ -400,7 +415,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_command_vectorSearchCommandTotalLatency_seconds{quantile=\"0.99\"}",
           "legendFormat": "Vector Search p99",
@@ -426,7 +441,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -549,7 +564,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_index_stats_query_feature_total[$__rate_interval]) * 60",
           "legendFormat": "{{name}}",
@@ -558,7 +573,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_index_stats_query_feature_total",
           "legendFormat": "{{name}}",
@@ -571,7 +586,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -656,7 +671,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "(histogram_quantile(0.5, sum by (le) (rate(mongot_index_stats_query_numCandidatesPerQuery_bucket[$__rate_interval]))) unless (sum(rate(mongot_index_stats_query_numCandidatesPerQuery_count[$__rate_interval])) == 0)) or on() vector(0)",
           "legendFormat": "p50 Candidates",
@@ -665,7 +680,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "(histogram_quantile(0.9, sum by (le) (rate(mongot_index_stats_query_numCandidatesPerQuery_bucket[$__rate_interval]))) unless (sum(rate(mongot_index_stats_query_numCandidatesPerQuery_count[$__rate_interval])) == 0)) or on() vector(0)",
           "legendFormat": "p90 Candidates",
@@ -678,7 +693,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -763,7 +778,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_command_searchCommandTotalLatency_seconds_count[$__rate_interval])",
           "legendFormat": "Text Search/sec",
@@ -772,7 +787,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_command_vectorSearchCommandTotalLatency_seconds_count[$__rate_interval])",
           "legendFormat": "Vector Search/sec",
@@ -785,7 +800,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -870,7 +885,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_command_searchCommandFailure_total[$__rate_interval])",
           "legendFormat": "Text Search Failures/sec",
@@ -879,7 +894,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_command_vectorSearchCommandFailure_total[$__rate_interval])",
           "legendFormat": "Vector Search Failures/sec",
@@ -892,7 +907,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -977,7 +992,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_index_stats_query_batchDataSize{quantile=\"0.5\"}",
           "legendFormat": "p50 Batch Size",
@@ -986,7 +1001,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_index_stats_query_batchDataSize{quantile=\"0.99\"}",
           "legendFormat": "p99 Batch Size",
@@ -1012,7 +1027,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1097,7 +1112,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_index_stats_indexing_insert_total[$__rate_interval])",
           "legendFormat": "Inserts/sec - {{indexId_logString}}",
@@ -1106,7 +1121,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_index_stats_indexing_update_total[$__rate_interval])",
           "legendFormat": "Updates/sec - {{indexId_logString}}",
@@ -1115,7 +1130,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_index_stats_indexing_delete_total[$__rate_interval])",
           "legendFormat": "Deletes/sec - {{indexId_logString}}",
@@ -1128,7 +1143,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1217,7 +1232,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_index_stats_indexing_replicationLagMs",
           "legendFormat": "Lag ms - {{indexId_logString}}",
@@ -1230,7 +1245,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1328,7 +1343,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_index_stats_indexSizeBytes / 1024 / 1024",
           "legendFormat": "Index Size MB - {{indexId_logString}}",
@@ -1341,7 +1356,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1426,7 +1441,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_index_stats_numLuceneDocs",
           "legendFormat": "Document Count - {{indexId_logString}}",
@@ -1439,7 +1454,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1537,7 +1552,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_index_stats_indexing_totalBytesProcessed_total[$__rate_interval])",
           "legendFormat": "Bytes Processed/sec - {{indexId_logString}}",
@@ -1563,7 +1578,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1648,7 +1663,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongodb_ss_mem_resident * 1024 * 1024",
           "legendFormat": "MongoDB Resident Memory",
@@ -1657,7 +1672,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongodb_ss_wt_cache_bytes_currently_in_the_cache",
           "legendFormat": "WiredTiger Cache",
@@ -1670,7 +1685,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1755,7 +1770,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_jvm_memory_used_bytes{area=\"heap\"}",
           "legendFormat": "JVM Heap Used",
@@ -1764,7 +1779,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_jvm_memory_max_bytes{area=\"heap\"}",
           "legendFormat": "JVM Heap Max",
@@ -1773,7 +1788,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_jvm_memory_used_bytes{area=\"nonheap\"}",
           "legendFormat": "JVM Non-Heap Used",
@@ -1786,7 +1801,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1871,7 +1886,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongodb_ss_opcounters{legacy_op_type=\"insert\"}[$__rate_interval])",
           "legendFormat": "Inserts",
@@ -1880,7 +1895,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongodb_ss_opcounters{legacy_op_type=\"query\"}[$__rate_interval])",
           "legendFormat": "Queries",
@@ -1889,7 +1904,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongodb_ss_opcounters{legacy_op_type=\"update\"}[$__rate_interval])",
           "legendFormat": "Updates",
@@ -1898,7 +1913,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongodb_ss_opcounters{legacy_op_type=\"delete\"}[$__rate_interval])",
           "legendFormat": "Deletes",
@@ -1911,7 +1926,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1996,7 +2011,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongodb_ss_connections{conn_type=\"current\"}",
           "legendFormat": "Current",
@@ -2005,7 +2020,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongodb_ss_connections{conn_type=\"active\"}",
           "legendFormat": "Active",
@@ -2018,7 +2033,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2116,7 +2131,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_jvm_gc_pause_seconds_count[$__rate_interval])",
           "legendFormat": "GC Pauses/sec - {{gc}}",
@@ -2125,7 +2140,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_jvm_gc_pause_seconds_sum[$__rate_interval]) / rate(mongot_jvm_gc_pause_seconds_count[$__rate_interval])",
           "legendFormat": "Avg GC Pause Duration - {{gc}}",
@@ -2138,7 +2153,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2223,7 +2238,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongodb_ss_network_bytesIn[$__rate_interval])",
           "legendFormat": "MongoDB Bytes In/sec",
@@ -2232,7 +2247,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongodb_ss_network_bytesOut[$__rate_interval])",
           "legendFormat": "MongoDB Bytes Out/sec",
@@ -2245,7 +2260,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2331,7 +2346,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "(rate(mongodb_ss_extra_info_user_time_us[$__rate_interval]) + rate(mongodb_ss_extra_info_system_time_us[$__rate_interval])) / 1000000 / scalar(mongodb_sys_cpu_num_cores_available_to_process)",
           "legendFormat": "MongoDB Process CPU",
@@ -2344,7 +2359,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2430,7 +2445,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_process_cpu_usage{Scope=\"jvm\"}",
           "legendFormat": "Mongot Process CPU",
@@ -2439,7 +2454,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_system_cpu_usage{Scope=\"jvm\"}",
           "legendFormat": "System CPU (host)",
@@ -2465,7 +2480,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2550,7 +2565,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum by (id) (mongot_jvm_buffer_memory_used_bytes{Scope=\"jvm\"})",
           "legendFormat": "{{id}} Used",
@@ -2563,7 +2578,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2648,7 +2663,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum by (id) (mongot_jvm_buffer_total_capacity_bytes{Scope=\"jvm\"})",
           "legendFormat": "{{id}} Capacity",
@@ -2661,7 +2676,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2746,7 +2761,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum by (area) (mongot_jvm_memory_committed_bytes{Scope=\"jvm\"})",
           "legendFormat": "{{area}} Committed",
@@ -2759,7 +2774,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2844,7 +2859,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "sum by (indexId_logString) (mongot_index_stats_segment_count)",
           "legendFormat": "{{indexId_logString}}",
@@ -2857,7 +2872,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2942,7 +2957,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "increase(mongot_indexFactory_cacheWarmerTotalMilliseconds_seconds[5m])",
           "legendFormat": "Warmup Time (5m)",
@@ -2955,7 +2970,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3040,7 +3055,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_system_memory_phys_inUse_bytes",
           "legendFormat": "Physical In Use",
@@ -3049,7 +3064,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "mongot_system_memory_phys_available_bytes",
           "legendFormat": "Physical Available",
@@ -3062,7 +3077,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3151,7 +3166,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_system_memory_virt_swap_pagesIn_operations[5m])",
           "legendFormat": "Swap Pages In/sec",
@@ -3160,7 +3175,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "${DS_PROMETHEUS}"
           },
           "expr": "rate(mongot_system_memory_virt_swap_pagesOut_operations[5m])",
           "legendFormat": "Swap Pages Out/sec",
@@ -3171,5 +3186,4 @@
       "type": "timeseries"
     }
   ]
-  
 }
